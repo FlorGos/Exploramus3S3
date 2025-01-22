@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swipezone/domains/location_manager.dart';
 import 'package:swipezone/repositories/models/location.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:swipezone/repositories/models/categories.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:app_settings/app_settings.dart';
+import 'package:flutter/services.dart';
+
 
 enum SortOption { NameAZ, NameZA, TypeAZ, TypeZA, Proximity }
 
@@ -17,6 +22,7 @@ class SelectPage extends StatefulWidget {
 }
 
 class _SelectPageState extends State<SelectPage> {
+  bool _permissionsChecked = false;
   Map<Location, bool> plans = {};
   List<Location> filteredLocations = [];
   String searchQuery = '';
@@ -28,8 +34,111 @@ class _SelectPageState extends State<SelectPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeApp());
     _loadPlans();
     _getUserLocation();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionsAndProceed();
+    }
+  }
+
+  Future<void> _initializeApp() async {
+    bool firstLaunch = await _isFirstLaunch();
+    if (firstLaunch) {
+      await _showPermissionDialog();
+    } else {
+      await _checkPermissionsAndProceed();
+    }
+  }
+  Future<bool> _isFirstLaunch() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isFirstLaunch = prefs.getBool('first_launch') ?? true;
+    if (isFirstLaunch) {
+      await prefs.setBool('first_launch', false);
+    }
+    return isFirstLaunch;
+  }
+
+  Future<bool> _checkPermissions() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.location,
+    ].request();
+
+    // Retourne true si toutes les permissions sont accordées, sinon false
+    return statuses.values.every((status) => status.isGranted);
+  }
+
+  Future<void> _checkPermissionsAndProceed() async {
+    bool permissionsGranted = await _checkPermissions();
+    if (permissionsGranted) {
+      await _loadPlans();
+      await _getUserLocation();
+      setState(() => _permissionsChecked = true);
+    } else {
+      await _showPermissionDialog();
+    }
+  }
+
+  Future<void> _showPermissionDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Autorisations nécessaires'),
+          content: Text('Cette application nécessite des autorisations pour fonctionner.'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Quitter'),
+              onPressed: () => SystemNavigator.pop(), // Quitte l'application
+            ),
+            TextButton(
+              child: Text('Accorder'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                bool granted = await _checkPermissions();
+                if (!granted) {
+                  await _showOpenSettingsDialog();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  Future<void> _showOpenSettingsDialog() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Permissions requises'),
+          content: Text('Vous devez accorder les permissions pour utiliser cette fonctionnalité. Voulez-vous accéder aux paramètres de l\'application ?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Annuler'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Ferme le dialogue
+              },
+            ),
+            TextButton(
+              child: Text('Ouvrir les paramètres'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Ferme le dialogue
+                await AppSettings.openAppSettings();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _loadPlans() async {
@@ -113,6 +222,23 @@ class _SelectPageState extends State<SelectPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_permissionsChecked) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Permissions nécessaires'),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _checkPermissionsAndProceed,
+                child: Text('Vérifier les permissions'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -254,4 +380,5 @@ class _SelectPageState extends State<SelectPage> {
       ),
     );
   }
+
 }
