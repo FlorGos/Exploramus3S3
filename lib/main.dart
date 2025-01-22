@@ -8,14 +8,13 @@ import 'package:swipezone/screens/select_page.dart';
 import 'package:swipezone/theme/theme.dart';
 import 'package:swipezone/theme/theme_provider.dart';
 import 'package:swipezone/repositories/models/location.dart';
-
-
+import 'package:swipezone/screens/SettingsPage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final pref = await SharedPreferences.getInstance();
-  
+
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(pref: pref),
@@ -65,14 +64,19 @@ final GoRouter _router = GoRouter(
             );
           },
         ),
-
-
         GoRoute(
           path: 'selectpage',
           builder: (BuildContext context, GoRouterState state) {
             return const SelectPage(
               title: "SelectPage",
             );
+          },
+        ),
+        // Nouvelle route pour SettingsPage
+        GoRoute(
+          path: 'settings',
+          builder: (BuildContext context, GoRouterState state) {
+            return const SettingsPage(); // Assurez-vous que vous avez créé cette page
           },
         ),
       ],

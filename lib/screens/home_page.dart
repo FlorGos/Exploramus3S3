@@ -22,6 +22,15 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              // Redirige vers la page des paramètres
+              GoRouter.of(context).go('/settings');
+            },
+          ),
+        ],
       ),
       body: FutureBuilder(
         future: LocationUseCase().getLocation(),
@@ -36,14 +45,6 @@ class _HomePageState extends State<HomePage> {
 
             return ListView(children: [
               LocationCard(location: data[LocationManager().currentIndex]),
-              Center(
-                child: Switch(
-                  value: Provider.of<ThemeProvider>(context).getThemeMode() == ThemeMode.dark,
-                  onChanged: (value) {
-                    Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-                  },
-                ),
-              ),
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -76,24 +77,24 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               Center(
-                child: FilledButton(
-                  onPressed: () {
-                    GoRouter.of(context).go('/selectpage');
-                  },
-                  child: const Text("Create plan"),
-                ),
+                child:
+                FilledButton(onPressed:
+                    () =>
+                    GoRouter.of(context).go('/selectpage'),
+                    child:
+                    const Text("Create plan")),
               )
             ]);
           } else {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child:
+            CircularProgressIndicator());
           }
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        tooltip: 'Add plan',
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton:
+      FloatingActionButton(onPressed:
+          () {}, tooltip:'Add plan',child:
+      const Icon(Icons.add),),
     );
   }
 }
