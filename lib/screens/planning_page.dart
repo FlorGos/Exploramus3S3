@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:swipezone/repositories/models/location.dart';
 import 'location_detail_page.dart';
-import 'map_page.dart';
+import 'package:swipezone/screens/widgets/map_page.dart'; // Import your updated MapScreen class
+import 'package:latlong2/latlong.dart';
 
 class PlanningPage extends StatefulWidget {
   final String title;
@@ -19,7 +18,6 @@ class PlanningPage extends StatefulWidget {
   @override
   State<PlanningPage> createState() => _PlanningPageState();
 }
-
 
 class _PlanningPageState extends State<PlanningPage> {
   @override
@@ -39,7 +37,6 @@ class _PlanningPageState extends State<PlanningPage> {
               '${location.localization.lat ?? 'N/A'}, ${location.localization.lng ?? 'N/A'}',
             ),
             onTap: () {
-              // Naviguer vers la page de détails du lieu
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -50,25 +47,30 @@ class _PlanningPageState extends State<PlanningPage> {
           );
         },
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: () async {
-              Position userPosition = await Geolocator.getCurrentPosition();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MapPage(userPosition: userPosition, locations: widget.selectedLocations),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          try {
+            Position userPosition = await Geolocator.getCurrentPosition();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MapScreen(
+                  userPosition:
+                  LatLng(userPosition.latitude, userPosition.longitude),
+                  locations: widget.selectedLocations,
                 ),
-              );
-            },
-            tooltip: 'Créer le trajet',
-            child: const Icon(Icons.directions),
-          ),
-        ],
+              ),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content:
+              const Text('Unable to get location. Please enable location services.'),
+            ));
+          }
+        },
+        tooltip: 'Créer le trajet',
+        child: const Icon(Icons.directions),
       ),
     );
   }
-
 }
