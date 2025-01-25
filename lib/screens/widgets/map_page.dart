@@ -9,6 +9,7 @@ import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 
 
+
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
   final List<Location> locations;
@@ -95,7 +96,7 @@ class _MapScreenState extends State<MapScreen> {
                 child: Text('Ajouter'),
                 onPressed: () async {
                   Navigator.of(context).pop();
-                  final address = await _getAddressFromCoordinates(point.latitude, point.longitude);
+                  final address = await _getStreetNameFromCoordinates(point.latitude, point.longitude);
                   Location newLocation = Location(
                     "Nouveau Marqueur",
                     null,
@@ -120,18 +121,37 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  Future<String> _getAddressFromCoordinates(double lat, double lng) async {
+
+  Future<String> _getStreetNameFromCoordinates(double lat, double lng) async {
     try {
+      // Obtenez les "placemarks" en fonction des coordonnées.
       List<geocoding.Placemark> placemarks = await geocoding.placemarkFromCoordinates(lat, lng);
+
       if (placemarks.isNotEmpty) {
         geocoding.Placemark place = placemarks[0];
-        return "${place.street}, ${place.locality}, ${place.country}";
+
+        // Prioriser les informations disponibles.
+        String streetNumber = place.subThoroughfare ?? '';
+        String street = place.thoroughfare ?? '';
+        String city = place.locality ?? '';
+        String postalCode = place.postalCode ?? '';
+        String country = place.country ?? '';
+
+        // Retourne l'adresse sous une forme lisible
+        return "$streetNumber $street, $postalCode $city, $country".trim();
+      } else {
+        // Si aucun "placemark" trouvé, retourner les coordonnées directement.
+        return "Coordonnées: $lat, $lng";
       }
     } catch (e) {
       print("Erreur lors de l'obtention de l'adresse: $e");
+      // Retourne également les coordonnées en cas d'erreur.
+      return " $lat, $lng";
     }
-    return "Lat: $lat, Lng: $lng";
   }
+
+
+
 
   void _showLocationsList() {
     showDialog(
@@ -325,7 +345,7 @@ class _MapScreenState extends State<MapScreen> {
                   TransportMode(name: 'À pied', icon: Icons.directions_walk, estimatedTime: '30 min'),
                   TransportMode(name: 'Vélo', icon: Icons.directions_bike, estimatedTime: '15 min'),
                   TransportMode(name: 'Voiture', icon: Icons.directions_car, estimatedTime: '10 min'),
-                  TransportMode(name: 'Bus', icon: Icons.directions_bus, estimatedTime: '20 min'),
+                  TransportMode(name: 'Transport en commun', icon: Icons.directions_bus, estimatedTime: '20 min'),
                 ],
                 onListPressed: _showLocationsList,
                 onAddPressed: _addNewMarker,
