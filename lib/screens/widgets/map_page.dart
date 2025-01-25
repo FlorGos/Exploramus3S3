@@ -249,6 +249,14 @@ class _MapScreenState extends State<MapScreen> {
     return points;
   }
 
+  double _getTotalDistance() {
+    double totalDistance = 0;
+    for (int i = 0; i < _polylinePoints.length - 1; i++) {
+      totalDistance += calculateDistance(_polylinePoints[i], _polylinePoints[i + 1]);
+    }
+    return totalDistance;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -342,13 +350,14 @@ class _MapScreenState extends State<MapScreen> {
               right: 0,
               child: TransparentBottomBar(
                 transportModes: [
-                  TransportMode(name: 'À pied', icon: Icons.directions_walk, estimatedTime: '30 min'),
-                  TransportMode(name: 'Vélo', icon: Icons.directions_bike, estimatedTime: '15 min'),
-                  TransportMode(name: 'Voiture', icon: Icons.directions_car, estimatedTime: '10 min'),
-                  TransportMode(name: 'Transport en commun', icon: Icons.directions_bus, estimatedTime: '20 min'),
+                  TransportMode(name: 'À pied', icon: Icons.directions_walk, speedKmPerHour: 5),
+                  TransportMode(name: 'Vélo', icon: Icons.directions_bike, speedKmPerHour: 15),
+                  TransportMode(name: 'Voiture', icon: Icons.directions_car, speedKmPerHour: 50),
+                  TransportMode(name: 'Transport en commun', icon: Icons.directions_bus, speedKmPerHour: 30),
                 ],
                 onListPressed: _showLocationsList,
                 onAddPressed: _addNewMarker,
+                totalDistance: _getTotalDistance(),
               ),
             ),
         ],
@@ -361,11 +370,13 @@ class TransparentBottomBar extends StatelessWidget {
   final List<TransportMode> transportModes;
   final VoidCallback onListPressed;
   final VoidCallback onAddPressed;
+  final double totalDistance;
 
   TransparentBottomBar({
     required this.transportModes,
     required this.onListPressed,
     required this.onAddPressed,
+    required this.totalDistance,
   });
 
   @override
@@ -381,7 +392,7 @@ class TransparentBottomBar extends StatelessWidget {
           ...transportModes.map((mode) =>
               ElevatedButton.icon(
                 icon: Icon(mode.icon),
-                label: Text('${mode.name}\n${mode.estimatedTime}'),
+                label: Text('${mode.name}\n${mode.getEstimatedTime(totalDistance)}'),
                 onPressed: () {
                   // Action à effectuer lors du clic
                 },
@@ -406,9 +417,15 @@ class TransparentBottomBar extends StatelessWidget {
 class TransportMode {
   final String name;
   final IconData icon;
-  final String estimatedTime;
+  final double speedKmPerHour;
 
-  TransportMode({required this.name, required this.icon, required this.estimatedTime});
+  TransportMode({required this.name, required this.icon, required this.speedKmPerHour});
+
+  String getEstimatedTime(double distanceInMeters) {
+    double timeInHours = distanceInMeters / 1000 / speedKmPerHour;
+    int minutes = (timeInHours * 60).round();
+    return '$minutes min';
+  }
 }
 
 class LocationDetailModal extends StatefulWidget {
@@ -490,3 +507,4 @@ class _LocationDetailModalState extends State<LocationDetailModal> {
     );
   }
 }
+
