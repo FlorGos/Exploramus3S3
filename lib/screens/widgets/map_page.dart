@@ -1,4 +1,4 @@
-import 'dart:math' show pi, sin, cos, sqrt, atan2;
+import 'dart:math' show pi, sin, cos, sqrt, atan2, Random;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,8 +7,6 @@ import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
-
-
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -28,6 +26,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _isBarVisible = true;
   List<LatLng> _polylinePoints = [];
   bool _isAddingMarker = false;
+  TransportMode? _selectedMode;
 
   @override
   void initState() {
@@ -61,7 +60,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _updatePolylinePoints() {
-    _polylinePoints = createPolylinePoints();
+    _polylinePoints = _calculateSimulatedRoute(_selectedMode);
     setState(() {});
   }
 
@@ -121,37 +120,26 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-
   Future<String> _getStreetNameFromCoordinates(double lat, double lng) async {
     try {
-      // Obtenez les "placemarks" en fonction des coordonnées.
       List<geocoding.Placemark> placemarks = await geocoding.placemarkFromCoordinates(lat, lng);
 
       if (placemarks.isNotEmpty) {
         geocoding.Placemark place = placemarks[0];
-
-        // Prioriser les informations disponibles.
         String streetNumber = place.subThoroughfare ?? '';
         String street = place.thoroughfare ?? '';
         String city = place.locality ?? '';
         String postalCode = place.postalCode ?? '';
         String country = place.country ?? '';
-
-        // Retourne l'adresse sous une forme lisible
         return "$streetNumber $street, $postalCode $city, $country".trim();
       } else {
-        // Si aucun "placemark" trouvé, retourner les coordonnées directement.
         return "Coordonnées: $lat, $lng";
       }
     } catch (e) {
       print("Erreur lors de l'obtention de l'adresse: $e");
-      // Retourne également les coordonnées en cas d'erreur.
       return " $lat, $lng";
     }
   }
-
-
-
 
   void _showLocationsList() {
     showDialog(
@@ -240,12 +228,89 @@ class _MapScreenState extends State<MapScreen> {
     return sortedLocations;
   }
 
-  List<LatLng> createPolylinePoints() {
+  List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
     final sortedLocations = sortLocationsByDistance();
     final points = <LatLng>[widget.userPosition];
-    for (final location in sortedLocations) {
-      points.add(LatLng(location.localization.lat!, location.localization.lng!));
+    final random = Random();
+
+    for (int i = 0; i < sortedLocations.length; i++) {
+      final location = sortedLocations[i];
+      final start = points.last;
+      final end = LatLng(location.localization.lat!, location.localization.lng!);
+
+      // Générer des points intermédiaires pour simuler un itinéraire
+      final intermediatePoints = _generateIntermediatePoints(start, end, mode, random);
+      points.addAll(intermediatePoints);
     }
+
+    return points;
+  }
+
+  List<LatLng> _generateIntermediatePoints(LatLng start, LatLng end, TransportMode? mode, Random random) {
+    final points = <LatLng>[];
+    final distance = calculateDistance(start, end);
+
+    // Définir la taille de la grille en fonction du mode de transport
+    double gridSize;
+    switch (mode?.name ?? 'À pied') {
+      case 'À pied':
+        gridSize = 0.0001; // Environ 11 mètres à l'équateur
+        break;
+      case 'Vélo':
+        gridSize = 0.0002;
+        break;
+      case 'Voiture':
+        gridSize = 0.0005;
+        break;
+      case 'Transport en commun':
+        gridSize = 0.001;
+        break;
+      default:
+        gridSize = 0.0002;
+    }
+
+    // Calculer le nombre de cellules de la grille entre le début et la fin
+    int gridCellsX = ((end.longitude - start.longitude) / gridSize).abs().ceil();
+    int gridCellsY = ((end.latitude - start.latitude) / gridSize).abs().ceil();
+
+    // Initialiser la position actuelle
+    LatLng current = start;
+    points.add(current);
+
+    while (current != end) {
+      // Déterminer la direction générale
+      double dx = end.longitude - current.longitude;
+      double dy = end.latitude - current.latitude;
+
+      // Choisir un mouvement horizontal ou vertical en fonction de la distance restante
+      if (random.nextBool() && dx.abs() > gridSize / 2) {
+        // Mouvement horizontal
+        current = LatLng(
+          current.latitude,
+          current.longitude + (dx > 0 ? gridSize : -gridSize),
+        );
+      } else if (dy.abs() > gridSize / 2) {
+        // Mouvement vertical
+        current = LatLng(
+          current.latitude + (dy > 0 ? gridSize : -gridSize),
+          current.longitude,
+        );
+      } else {
+        // Si on est proche de la destination, on y va directement
+        current = end;
+      }
+
+      // Ajouter une petite variation aléatoire pour simuler des virages
+      if (current != end) {
+        current = LatLng(
+          current.latitude + (random.nextDouble() - 0.5) * gridSize * 0.2,
+          current.longitude + (random.nextDouble() - 0.5) * gridSize * 0.2,
+        );
+      }
+
+      points.add(current);
+    }
+
     return points;
   }
 
@@ -355,9 +420,16 @@ class _MapScreenState extends State<MapScreen> {
                   TransportMode(name: 'Voiture', icon: Icons.directions_car, speedKmPerHour: 50),
                   TransportMode(name: 'Transport en commun', icon: Icons.directions_bus, speedKmPerHour: 30),
                 ],
+                selectedMode: _selectedMode,
                 onListPressed: _showLocationsList,
                 onAddPressed: _addNewMarker,
                 totalDistance: _getTotalDistance(),
+                onTransportModeSelected: (mode) {
+                  setState(() {
+                    _selectedMode = mode;
+                    _polylinePoints = _calculateSimulatedRoute(mode);
+                  });
+                },
               ),
             ),
         ],
@@ -371,12 +443,16 @@ class TransparentBottomBar extends StatelessWidget {
   final VoidCallback onListPressed;
   final VoidCallback onAddPressed;
   final double totalDistance;
+  final Function(TransportMode) onTransportModeSelected;
+  final TransportMode? selectedMode;
 
   TransparentBottomBar({
     required this.transportModes,
     required this.onListPressed,
     required this.onAddPressed,
     required this.totalDistance,
+    required this.onTransportModeSelected,
+    this.selectedMode,
   });
 
   @override
@@ -393,8 +469,11 @@ class TransparentBottomBar extends StatelessWidget {
               ElevatedButton.icon(
                 icon: Icon(mode.icon),
                 label: Text('${mode.name}\n${mode.getEstimatedTime(totalDistance)}'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mode == selectedMode ? Colors.blue : null,
+                ),
                 onPressed: () {
-                  // Action à effectuer lors du clic
+                  onTransportModeSelected(mode);
                 },
               )
           ).toList(),
