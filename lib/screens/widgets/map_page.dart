@@ -27,6 +27,8 @@ class _MapScreenState extends State<MapScreen> {
   List<LatLng> _polylinePoints = [];
   bool _isAddingMarker = false;
   TransportMode? _selectedMode;
+  // Add this variable to the _MapScreenState class
+  bool _isLoadingRoute = false;
 
   @override
   void initState() {
@@ -408,6 +410,10 @@ class _MapScreenState extends State<MapScreen> {
               onPressed: _toggleBarVisibility,
             ),
           ),
+          if (_isLoadingRoute)
+            Center(
+              child: CircularProgressIndicator(),
+            ),
           if (_isBarVisible)
             Positioned(
               bottom: 0,
@@ -424,10 +430,15 @@ class _MapScreenState extends State<MapScreen> {
                 onListPressed: _showLocationsList,
                 onAddPressed: _addNewMarker,
                 totalDistance: _getTotalDistance(),
-                onTransportModeSelected: (mode) {
+                onTransportModeSelected: (mode) async {
                   setState(() {
                     _selectedMode = mode;
-                    _polylinePoints = _calculateSimulatedRoute(mode);
+                    _isLoadingRoute = true;
+                  });
+                  final newPoints = await Future.sync(() => _calculateSimulatedRoute(mode));
+                  setState(() {
+                    _polylinePoints = newPoints;
+                    _isLoadingRoute = false;
                   });
                 },
               ),
