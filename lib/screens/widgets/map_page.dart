@@ -8,6 +8,9 @@ import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:osrm/osrm.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -62,10 +65,29 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
+
+  //TEST LOCATION***********************************************************************************************
+  //CALCULATED FOR OSMR
+  /*
+  void _updatePolylinePoints() async {
+    setState(() {
+      _isLoadingRoute = true; // Affiche le loader
+    });
+
+    _polylinePoints = await _calculateSimulatedRoute(_selectedMode);
+
+    setState(() {
+      _isLoadingRoute = false; // Cache le loader
+    });
+  }*/
+
+
   void _updatePolylinePoints() {
     _polylinePoints = _calculateSimulatedRoute(_selectedMode);
     setState(() {});
   }
+
+  //TEST LOCATION***********************************************************************************************
 
   void _addNewMarker() {
     setState(() {
@@ -231,6 +253,90 @@ class _MapScreenState extends State<MapScreen> {
     return sortedLocations;
   }
 
+//TEST LOCATION***********************************************************************************************
+//CALCULATED POUR OSRM
+  /*
+  Future<List<LatLng>> _getRoutePoints(LatLng start, LatLng end) async {
+    final url = 'http://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print(data); // Debugging: Check API response structure
+
+        if (data['routes'].isEmpty) {
+          throw Exception('No route found');
+        }
+
+        String encodedPolyline = data['routes'][0]['geometry'];
+        List<LatLng> coordinates = decodePolyline(encodedPolyline);
+        return coordinates;
+      } else {
+        throw Exception('Failed to load route: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Error fetching route points: $e");
+      return []; // Return an empty list on error
+    }
+  }
+
+
+
+  List<LatLng> decodePolyline(String encoded) {
+    List<LatLng> poly = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result >> 1) ^ -(result & 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result >> 1) ^ -(result & 1));
+      lng += dlng;
+
+      LatLng p = LatLng(lat / 1E5, lng / 1E5);
+      poly.add(p);
+    }
+
+    return poly;
+  }
+//CALCULATED POUR OSRM
+
+  Future<List<LatLng>> _calculateSimulatedRoute(TransportMode? mode) async {
+    final sortedLocations = sortLocationsByDistance();
+    final points = <LatLng>[widget.userPosition];
+
+    for (final location in sortedLocations) {
+      final end = LatLng(location.localization.lat!, location.localization.lng!);
+
+      // Obtenez les points d'itinéraire en utilisant l'API
+      List<LatLng> routePoints = await _getRoutePoints(points.last, end);
+
+      // Ajoutez les points de l'itinéraire à la liste
+      points.addAll(routePoints);
+    }
+
+    return points;
+  }
+*/
+
+
+
   List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
     final sortedLocations = sortLocationsByDistance();
     final points = <LatLng>[widget.userPosition];
@@ -328,6 +434,8 @@ class _MapScreenState extends State<MapScreen> {
 
     return points;
   }*/
+
+  //TEST LOCATION***********************************************************************************************
 
   double _getTotalDistance() {
     double totalDistance = 0;
