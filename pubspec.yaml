@@ -38,6 +38,7 @@ dependencies:
   http: ^1.2.1
   app_settings: ^5.0.0 # Pour ouvrir les paramètres de l'application
   geocoding: ^2.1.0
+  osrm: ^0.0.8
     # Modifiez ici pour être
 
   # The following adds the Cupertino Icons font to your application.

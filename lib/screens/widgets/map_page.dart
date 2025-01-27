@@ -7,6 +7,7 @@ import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:osrm/osrm.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -233,6 +234,18 @@ class _MapScreenState extends State<MapScreen> {
   List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
     final sortedLocations = sortLocationsByDistance();
     final points = <LatLng>[widget.userPosition];
+
+    for (final location in sortedLocations) {
+      final end = LatLng(location.localization.lat!, location.localization.lng!);
+      points.add(end); // Ajoute directement le point final
+    }
+
+    return points;
+  }
+  /*
+  List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
+    final sortedLocations = sortLocationsByDistance();
+    final points = <LatLng>[widget.userPosition];
     final random = Random();
 
     for (int i = 0; i < sortedLocations.length; i++) {
@@ -241,14 +254,14 @@ class _MapScreenState extends State<MapScreen> {
       final end = LatLng(location.localization.lat!, location.localization.lng!);
 
       // Générer des points intermédiaires pour simuler un itinéraire
-      final intermediatePoints = _generateIntermediatePoints(start, end, mode, random);
-      points.addAll(intermediatePoints);
+      //final intermediatePoints = _generateIntermediatePoints(start, end, mode, random);
+      //points.addAll(intermediatePoints);
     }
 
     return points;
-  }
+  }*/
 
-  List<LatLng> _generateIntermediatePoints(LatLng start, LatLng end, TransportMode? mode, Random random) {
+ /* List<LatLng> _generateIntermediatePoints(LatLng start, LatLng end, TransportMode? mode, Random random) {
     final points = <LatLng>[];
     final distance = calculateDistance(start, end);
 
@@ -314,7 +327,7 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     return points;
-  }
+  }*/
 
   double _getTotalDistance() {
     double totalDistance = 0;
