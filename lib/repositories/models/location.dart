@@ -1,22 +1,30 @@
 import 'package:swipezone/repositories/models/weekly_schedule.dart';
-import 'activities.dart';
-import 'categories.dart';
-import 'contact.dart';
-import 'localization.dart';
+import 'package:swipezone/repositories/models/categories.dart';
+import 'package:swipezone/repositories/models/contact.dart';
+import 'package:swipezone/repositories/models/localization.dart';
 
 class Location {
-  String nom;
-  String? description;
-  WeeklySchedule? schedule;
-  Contact? contact;
-  String? photoUrl;
-  Categories category;
-  List<Activities>? activities;
-  Localization localization;
-  bool isLiked = false;
+  final String nom;
+  final String description;
+  final WeeklySchedule? schedule;
+  final Contact? contact;
+  String? imageUrl;  // Changé de final à variable
+  final Categories category;
+  final String? website;
+  final Localization localization;
+  bool isLiked;
 
-  Location(this.nom, this.description, this.schedule, this.contact,
-      this.photoUrl, this.category, this.activities, this.localization);
+  Location({
+    required this.nom,
+    required this.description,
+    this.schedule,
+    this.contact,
+    this.imageUrl,
+    required this.category,
+    this.website,
+    required this.localization,
+    this.isLiked = false,
+  });
 
   Map<String, dynamic> toJson() {
     return {
@@ -24,9 +32,9 @@ class Location {
       'description': description,
       'schedule': schedule?.toJson(),
       'contact': contact?.toJson(),
-      'photoUrl': photoUrl,
+      'imageUrl': imageUrl,
       'category': category.toString(),
-      'activities': activities?.map((a) => a.toString()).toList(),
+      'website': website,
       'localization': localization.toJson(),
       'isLiked': isLiked,
     };
@@ -34,15 +42,16 @@ class Location {
 
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
-      json['nom'],
-      json['description'],
-      json['schedule'] != null ? WeeklySchedule.fromJson(json['schedule']) : null,
-      json['contact'] != null ? Contact.fromJson(json['contact']) : null,
-      json['photoUrl'],
-      Categories.values.firstWhere((e) => e.toString() == json['category']),
-      json['activities']?.map((a) => Activities.values.firstWhere((e) => e.toString() == a)).toList().cast<Activities>(),
-      Localization.fromJson(json['localization']),
-    )..isLiked = json['isLiked'] ?? false;
+      nom: json['nom'],
+      description: json['description'],
+      schedule: json['schedule'] != null ? WeeklySchedule.fromJson(json['schedule']) : null,
+      contact: json['contact'] != null ? Contact.fromJson(json['contact']) : null,
+      imageUrl: json['imageUrl'],
+      category: Categories.values.firstWhere((e) => e.toString() == json['category']),
+      website: json['website'],
+      localization: Localization.fromJson(json['localization']),
+      isLiked: json['isLiked'] ?? false,
+    );
   }
 }
 

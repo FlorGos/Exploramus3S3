@@ -1,39 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:swipezone/domains/location_manager.dart';
-import 'package:swipezone/screens/widgets/location_card.dart';
+import 'package:swipezone/repositories/models/location.dart';
+import 'package:swipezone/screens/select_page.dart';
+import 'package:swipezone/screens/SettingsPage.dart';
 
 class HomePage extends StatefulWidget {
-  final String title;
-
-  const HomePage({super.key, required this.title});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  bool _isLoading = true; // Indique si les données sont en cours de chargement
-  String _errorMessage = ''; // Message d'erreur à afficher en cas de problème
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  late LocationManager _locationManager;
 
   @override
   void initState() {
     super.initState();
-    _loadData(); // Charge les données lors de l'initialisation
+    WidgetsBinding.instance.addObserver(this);
+    _locationManager = Provider.of<LocationManager>(context, listen: false);
+    _loadLocations();
   }
 
-  Future<void> _loadData() async {
-    try {
-      await LocationManager().loadState(); // Charge l'état des lieux
-      setState(() {
-        _isLoading = false; // Met à jour l'état pour indiquer que le chargement est terminé
-      });
-    } catch (e) {
-      print('Error loading data: $e');
-      setState(() {
-        _isLoading = false; // Met à jour l'état même en cas d'erreur
-        _errorMessage = 'Erreur lors du chargement des données. Veuillez réessayer.'; // Définit le message d'erreur
-      });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _locationManager.saveState();
+    } else if (state == AppLifecycleState.resumed) {
+      _loadLocations();
+    }
+  }
+
+  Future<void> _loadLocations() async {
+    await _locationManager.loadState();
+  }
+
+  void _handleLike() {
+    _locationManager.like();
+    if (_locationManager.allLocationsVisited) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vous avez vu tous les lieux ! Allez dans les paramètres pour réinitialiser.')),
+      );
+    }
+  }
+
+  void _handleDislike() {
+    _locationManager.dislike();
+    if (_locationManager.allLocationsVisited) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vous avez vu tous les lieux ! Allez dans les paramètres pour réinitialiser.')),
+      );
     }
   }
 
@@ -41,104 +64,111 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title), // Affiche le titre de la page
+        title: Text('SwipeZone'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              await GoRouter.of(context).push('/settings'); // Navigue vers la page des paramètres
-              setState(() {
-                LocationManager().resetCurrentIndex(); // Réinitialise l'index actuel après navigation
-              });
+            icon: Icon(Icons.list),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SelectPage(title: 'Sélection')),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsPage()),
+              ).then((_) => setState(() {}));
             },
           ),
         ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator()) // Affiche un indicateur de chargement si nécessaire
-          : _errorMessage.isNotEmpty
-          ? Center(child: Text(_errorMessage)) // Affiche un message d'erreur si présent
-          : _buildBody(), // Appelle la méthode pour construire le corps principal de la page
-    );
-  }
+      body: Consumer<LocationManager>(
+        builder: (context, locationManager, child) {
+          if (locationManager.isLoading) {
+            return Center(child: CircularProgressIndicator());
+          }
 
-  Widget _buildBody() {
-    var visibleLocations = LocationManager().getVisibleLocations(); // Récupère les lieux visibles
+          if (locationManager.allLocationsVisited) {
+            return Center(child: Text('Vous avez vu tous les lieux ! Réinitialisez les listes pour recommencer.'));
+          }
 
-    // Vérifiez si la liste des lieux visibles est vide
-    if (visibleLocations.isEmpty) {
-      return const Center(child: Text("Il n'y a plus de lieux à afficher.")); // Affiche un message si aucun lieu n'est disponible
-    }
+          Location? currentLocation = locationManager.getCurrentVisibleLocation();
 
-    // Assurez-vous que currentIndex est valide
-    if (LocationManager().currentIndex < 0 || LocationManager().currentIndex >= visibleLocations.length) {
-      // Réinitialisez currentIndex si nécessaire
-      LocationManager().resetCurrentIndex();
-      return const Center(child: Text("Il n'y a plus de lieux à afficher.")); // Affiche un message si aucun lieu n'est disponible
-    }
+          if (currentLocation == null) {
+            return Center(child: Text('Aucun lieu disponible'));
+          }
 
-    return Column(
-      children: [
-        Expanded(
-          child: LocationCard(location: visibleLocations[LocationManager().currentIndex]), // Affiche le lieu actuel dans un widget LocationCard
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    LocationManager().dislike(); // Appelle la méthode dislike sur LocationManager
-                    // Mettez à jour currentIndex après avoir disliké
-                    if (LocationManager().currentIndex >= visibleLocations.length) {
-                      LocationManager().resetCurrentIndex();
-                    }
-                  });
-                },
-                child: const Text("Dislike"), // Bouton pour disliker un lieu
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    LocationManager().like(); // Appelle la méthode like sur LocationManager
-                    // Mettez à jour currentIndex après avoir liké
-                    if (LocationManager().currentIndex >= visibleLocations.length) {
-                      LocationManager().resetCurrentIndex();
-                    }
-                  });
-                },
-                child: const Text("Like"), // Bouton pour liker un lieu
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "Disliked: ${LocationManager().dislikedLocations.length}", // Affiche le nombre de lieux dislikés
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(width: 20),
-              Text(
-                "Liked: ${LocationManager().likedLocations.length}", // Affiche le nombre de lieux likés
-                style: const TextStyle(color: Colors.green),
-              ),
-            ],
-          ),
-        ),
-        Center(
-          child: FilledButton(
-            onPressed: () => GoRouter.of(context).go('/selectpage'), // Navigue vers la page de sélection des lieux
-            child: const Text("Create plan"),
-          ),
-        )
-      ],
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  currentLocation.nom,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: currentLocation.imageUrl != null && currentLocation.imageUrl!.isNotEmpty
+                        ? Image.network(
+                      currentLocation.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(child: Text('Impossible de charger l\'image'));
+                      },
+                    )
+                        : Center(child: Text('Aucune image disponible')),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Catégorie: ${currentLocation.category.toString().split('.').last}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  currentLocation.description ?? 'Aucune description disponible',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _handleDislike,
+                      icon: Icon(Icons.thumb_down),
+                      label: Text('Pas intéressé'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _handleLike,
+                      icon: Icon(Icons.thumb_up),
+                      label: Text('Intéressé'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
+

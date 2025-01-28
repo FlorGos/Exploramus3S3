@@ -7,10 +7,6 @@ import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
-import 'package:osrm/osrm.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -31,8 +27,9 @@ class _MapScreenState extends State<MapScreen> {
   List<LatLng> _polylinePoints = [];
   bool _isAddingMarker = false;
   TransportMode? _selectedMode;
-  // Add this variable to the _MapScreenState class
   bool _isLoadingRoute = false;
+  Location? _movingLocation;
+  LatLng? _newPosition;
 
   @override
   void initState() {
@@ -65,29 +62,10 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-
-  //TEST LOCATION***********************************************************************************************
-  //CALCULATED FOR OSMR
-  /*
-  void _updatePolylinePoints() async {
-    setState(() {
-      _isLoadingRoute = true; // Affiche le loader
-    });
-
-    _polylinePoints = await _calculateSimulatedRoute(_selectedMode);
-
-    setState(() {
-      _isLoadingRoute = false; // Cache le loader
-    });
-  }*/
-
-
   void _updatePolylinePoints() {
     _polylinePoints = _calculateSimulatedRoute(_selectedMode);
     setState(() {});
   }
-
-  //TEST LOCATION***********************************************************************************************
 
   void _addNewMarker() {
     setState(() {
@@ -100,49 +78,73 @@ class _MapScreenState extends State<MapScreen> {
 
   void _handleMapTap(TapPosition tapPosition, LatLng point) {
     if (_isAddingMarker) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Ajouter un marqueur'),
-            content: Text('Voulez-vous ajouter un marqueur à cet endroit ?'),
-            actions: <Widget>[
-              TextButton(
-                child: Text('Annuler'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _isAddingMarker = false;
-                  });
-                },
-              ),
-              TextButton(
-                child: Text('Ajouter'),
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  final address = await _getStreetNameFromCoordinates(point.latitude, point.longitude);
-                  Location newLocation = Location(
-                    "Nouveau Marqueur",
-                    null,
-                    null,
-                    null,
-                    null,
-                    Categories.Unknown,
-                    null,
-                    Localization(address, point.latitude, point.longitude),
-                  );
-                  setState(() {
-                    widget.locations.add(newLocation);
-                    _isAddingMarker = false;
-                  });
-                  _updatePolylinePoints();
-                },
-              ),
-            ],
-          );
-        },
-      );
+      _addNewMarkerAtPosition(point);
+    } else if (_movingLocation != null) {
+      _updateMarkerPosition(_movingLocation!, point);
     }
+  }
+
+  void _addNewMarkerAtPosition(LatLng point) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Ajouter un marqueur'),
+          content: Text('Voulez-vous ajouter un marqueur à cet endroit ?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Annuler'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _isAddingMarker = false;
+                });
+              },
+            ),
+            TextButton(
+              child: Text('Ajouter'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final address = await _getStreetNameFromCoordinates(point.latitude, point.longitude);
+                Location newLocation = Location(
+                  nom: "Nouveau Marqueur",
+                  description: " ",
+                  schedule: null,
+                  contact: null,
+                  imageUrl: null,
+                  category: Categories.Unknown,
+                  website: null,
+                  localization: Localization(address, point.latitude, point.longitude),
+                );
+                setState(() {
+                  widget.locations.add(newLocation);
+                  _isAddingMarker = false;
+                });
+                _updatePolylinePoints();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _updateMarkerPosition(Location location, LatLng newPosition) {
+    setState(() {
+      location.localization.lat = newPosition.latitude;
+      location.localization.lng = newPosition.longitude;
+      _movingLocation = null;
+      _newPosition = null;
+    });
+    _updatePolylinePoints();
+    _updateLocationAddress(location);
+  }
+
+  Future<void> _updateLocationAddress(Location location) async {
+    final address = await _getStreetNameFromCoordinates(location.localization.lat!, location.localization.lng!);
+    setState(() {
+      location.localization.adress = address;
+    });
   }
 
   Future<String> _getStreetNameFromCoordinates(double lat, double lng) async {
@@ -253,189 +255,17 @@ class _MapScreenState extends State<MapScreen> {
     return sortedLocations;
   }
 
-//TEST LOCATION***********************************************************************************************
-//CALCULATED POUR OSRM
-  /*
-  Future<List<LatLng>> _getRoutePoints(LatLng start, LatLng end) async {
-    final url = 'http://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        print(data); // Debugging: Check API response structure
-
-        if (data['routes'].isEmpty) {
-          throw Exception('No route found');
-        }
-
-        String encodedPolyline = data['routes'][0]['geometry'];
-        List<LatLng> coordinates = decodePolyline(encodedPolyline);
-        return coordinates;
-      } else {
-        throw Exception('Failed to load route: ${response.statusCode}');
-      }
-    } catch (e) {
-      print("Error fetching route points: $e");
-      return []; // Return an empty list on error
-    }
-  }
-
-
-
-  List<LatLng> decodePolyline(String encoded) {
-    List<LatLng> poly = [];
-    int index = 0, len = encoded.length;
-    int lat = 0, lng = 0;
-
-    while (index < len) {
-      int b, shift = 0, result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlat = ((result >> 1) ^ -(result & 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlng = ((result >> 1) ^ -(result & 1));
-      lng += dlng;
-
-      LatLng p = LatLng(lat / 1E5, lng / 1E5);
-      poly.add(p);
-    }
-
-    return poly;
-  }
-//CALCULATED POUR OSRM
-
-  Future<List<LatLng>> _calculateSimulatedRoute(TransportMode? mode) async {
-    final sortedLocations = sortLocationsByDistance();
-    final points = <LatLng>[widget.userPosition];
-
-    for (final location in sortedLocations) {
-      final end = LatLng(location.localization.lat!, location.localization.lng!);
-
-      // Obtenez les points d'itinéraire en utilisant l'API
-      List<LatLng> routePoints = await _getRoutePoints(points.last, end);
-
-      // Ajoutez les points de l'itinéraire à la liste
-      points.addAll(routePoints);
-    }
-
-    return points;
-  }
-*/
-
-
-
   List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
     final sortedLocations = sortLocationsByDistance();
     final points = <LatLng>[widget.userPosition];
 
     for (final location in sortedLocations) {
       final end = LatLng(location.localization.lat!, location.localization.lng!);
-      points.add(end); // Ajoute directement le point final
+      points.add(end);
     }
 
     return points;
   }
-  /*
-  List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
-    final sortedLocations = sortLocationsByDistance();
-    final points = <LatLng>[widget.userPosition];
-    final random = Random();
-
-    for (int i = 0; i < sortedLocations.length; i++) {
-      final location = sortedLocations[i];
-      final start = points.last;
-      final end = LatLng(location.localization.lat!, location.localization.lng!);
-
-      // Générer des points intermédiaires pour simuler un itinéraire
-      //final intermediatePoints = _generateIntermediatePoints(start, end, mode, random);
-      //points.addAll(intermediatePoints);
-    }
-
-    return points;
-  }*/
-
- /* List<LatLng> _generateIntermediatePoints(LatLng start, LatLng end, TransportMode? mode, Random random) {
-    final points = <LatLng>[];
-    final distance = calculateDistance(start, end);
-
-    // Définir la taille de la grille en fonction du mode de transport
-    double gridSize;
-    switch (mode?.name ?? 'À pied') {
-      case 'À pied':
-        gridSize = 0.0001; // Environ 11 mètres à l'équateur
-        break;
-      case 'Vélo':
-        gridSize = 0.0002;
-        break;
-      case 'Voiture':
-        gridSize = 0.0005;
-        break;
-      case 'Transport en commun':
-        gridSize = 0.001;
-        break;
-      default:
-        gridSize = 0.0002;
-    }
-
-    // Calculer le nombre de cellules de la grille entre le début et la fin
-    int gridCellsX = ((end.longitude - start.longitude) / gridSize).abs().ceil();
-    int gridCellsY = ((end.latitude - start.latitude) / gridSize).abs().ceil();
-
-    // Initialiser la position actuelle
-    LatLng current = start;
-    points.add(current);
-
-    while (current != end) {
-      // Déterminer la direction générale
-      double dx = end.longitude - current.longitude;
-      double dy = end.latitude - current.latitude;
-
-      // Choisir un mouvement horizontal ou vertical en fonction de la distance restante
-      if (random.nextBool() && dx.abs() > gridSize / 2) {
-        // Mouvement horizontal
-        current = LatLng(
-          current.latitude,
-          current.longitude + (dx > 0 ? gridSize : -gridSize),
-        );
-      } else if (dy.abs() > gridSize / 2) {
-        // Mouvement vertical
-        current = LatLng(
-          current.latitude + (dy > 0 ? gridSize : -gridSize),
-          current.longitude,
-        );
-      } else {
-        // Si on est proche de la destination, on y va directement
-        current = end;
-      }
-
-      // Ajouter une petite variation aléatoire pour simuler des virages
-      if (current != end) {
-        current = LatLng(
-          current.latitude + (random.nextDouble() - 0.5) * gridSize * 0.2,
-          current.longitude + (random.nextDouble() - 0.5) * gridSize * 0.2,
-        );
-      }
-
-      points.add(current);
-    }
-
-    return points;
-  }*/
-
-  //TEST LOCATION***********************************************************************************************
 
   double _getTotalDistance() {
     double totalDistance = 0;
@@ -510,10 +340,24 @@ class _MapScreenState extends State<MapScreen> {
                               },
                             );
                           },
-                          child: const Icon(
-                            Icons.location_pin,
-                            color: Colors.red,
-                            size: 40.0,
+                          onLongPress: () {
+                            setState(() {
+                              _movingLocation = location;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Déplacez le marqueur à sa nouvelle position'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 300),
+                            child: Icon(
+                              Icons.location_pin,
+                              color: _movingLocation == location ? Colors.green : Colors.red,
+                              size: _movingLocation == location ? 50.0 : 40.0,
+                            ),
                           ),
                         ),
                       );
@@ -594,32 +438,54 @@ class TransparentBottomBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.5),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ...transportModes.map((mode) =>
-              ElevatedButton.icon(
-                icon: Icon(mode.icon),
-                label: Text('${mode.name}\n${mode.getEstimatedTime(totalDistance)}'),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ...transportModes.map((mode) =>
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ElevatedButton.icon(
+                    icon: Icon(mode.icon, size: 16),
+                    label: Text(
+                      '${mode.name}\n${mode.getEstimatedTime(totalDistance)}',
+                      style: TextStyle(fontSize: 10),
+                      textAlign: TextAlign.center,
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mode == selectedMode ? Colors.blue : null,
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                    onPressed: () {
+                      onTransportModeSelected(mode);
+                    },
+                  ),
+                )
+            ).toList(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.list, size: 16),
+                label: Text('Liste', style: TextStyle(fontSize: 10)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: mode == selectedMode ? Colors.blue : null,
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 ),
-                onPressed: () {
-                  onTransportModeSelected(mode);
-                },
-              )
-          ).toList(),
-          ElevatedButton.icon(
-            icon: Icon(Icons.list),
-            label: Text('Liste'),
-            onPressed: onListPressed,
-          ),
-          ElevatedButton.icon(
-            icon: Icon(Icons.add_location),
-            label: Text('Ajouter'),
-            onPressed: onAddPressed,
-          ),
-        ],
+                onPressed: onListPressed,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.add_location, size: 16),
+                label: Text('Ajouter', style: TextStyle(fontSize: 10)),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                onPressed: onAddPressed,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart'; // Add this import
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swipezone/screens/home_page.dart';
 import 'package:swipezone/screens/planning_page.dart';
@@ -11,7 +11,6 @@ import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/screens/SettingsPage.dart';
 import 'package:swipezone/domains/location_manager.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -20,7 +19,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => LocationManager()), // Assurez-vous d'ajouter ce provider
+        ChangeNotifierProvider(create: (_) => LocationManager()),
         ChangeNotifierProvider(create: (_) => ThemeProvider(pref: pref)),
       ],
       child: MyApp(),
@@ -54,13 +53,11 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/',
       builder: (BuildContext context, GoRouterState state) {
-        return const HomePage(
-          title: 'HomePage',
-        );
+        return const HomePage();
       },
       routes: <RouteBase>[
         GoRoute(
-          path: '/planningpage',
+          path: 'planningpage',
           builder: (context, state) {
             final selectedLocations = state.extra as List<Location>;
             return PlanningPage(
@@ -77,11 +74,10 @@ final GoRouter _router = GoRouter(
             );
           },
         ),
-        // Nouvelle route pour SettingsPage
         GoRoute(
           path: 'settings',
           builder: (BuildContext context, GoRouterState state) {
-            return const SettingsPage(); // Assurez-vous que vous avez créé cette page
+            return const SettingsPage();
           },
         ),
       ],

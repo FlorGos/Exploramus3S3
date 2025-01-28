@@ -16,7 +16,8 @@ class LocationManager extends ChangeNotifier {
   List<Location> locations = [];
   List<Location> likedLocations = [];
   List<Location> dislikedLocations = [];
-  int currentIndex = 0;
+  String? currentLocationId;
+  bool isLoading = true;
 
   Map<Location, bool> get filters {
     return Map.fromIterable(
@@ -27,41 +28,43 @@ class LocationManager extends ChangeNotifier {
   }
 
   Future<void> loadLocations() async {
-    locations = await ILocationRepository().getLocations();
+    if (locations.isEmpty) {
+      List<Location> allLocations = await ILocationRepository().getLocations();
+      // Éliminer les doublons basés sur le nom du lieu
+      locations = allLocations.toSet().toList();
+    }
     notifyListeners();
   }
 
   void like() {
-    if (currentIndex < locations.length) {
-      Location likedLocation = locations[currentIndex]..isLiked = true;
-      if (!likedLocations.contains(likedLocation)) {
-        likedLocations.add(likedLocation);
-      }
-      next();
+    Location? currentLocation = getCurrentVisibleLocation();
+    if (currentLocation != null) {
+      currentLocation.isLiked = true;
+      likedLocations.add(currentLocation);
+      locations.remove(currentLocation);
+      _moveToNextLocation();
       saveState();
       notifyListeners();
     }
   }
 
   void dislike() {
-    if (currentIndex < locations.length) {
-      dislikedLocations.add(locations[currentIndex]);
-      next();
+    Location? currentLocation = getCurrentVisibleLocation();
+    if (currentLocation != null) {
+      dislikedLocations.add(currentLocation);
+      locations.remove(currentLocation);
+      _moveToNextLocation();
       saveState();
       notifyListeners();
     }
   }
 
-  void unlikeLocation(Location location) {
-    likedLocations.remove(location);
-    location.isLiked = false;
-    saveState();
-    notifyListeners();
-  }
-
-  void next() {
-    if (currentIndex < locations.length - 1) {
-      currentIndex++;
+  void _moveToNextLocation() {
+    List<Location> visibleLocations = getVisibleLocations();
+    if (visibleLocations.isNotEmpty) {
+      currentLocationId = visibleLocations.first.nom;
+    } else {
+      currentLocationId = null;
     }
   }
 
@@ -69,19 +72,29 @@ class LocationManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('likedLocations', jsonEncode(likedLocations.map((e) => e.toJson()).toList()));
     await prefs.setString('dislikedLocations', jsonEncode(dislikedLocations.map((e) => e.toJson()).toList()));
+    await prefs.setString('locations', jsonEncode(locations.map((e) => e.toJson()).toList()));
+    if (currentLocationId != null) {
+      await prefs.setString('currentLocationId', currentLocationId!);
+    } else {
+      await prefs.remove('currentLocationId');
+    }
   }
 
   Future<void> loadState() async {
-    await loadLocations();
+    isLoading = true;
+    notifyListeners();
+
     final prefs = await SharedPreferences.getInstance();
     final likedJson = prefs.getString('likedLocations');
     final dislikedJson = prefs.getString('dislikedLocations');
+    final locationsJson = prefs.getString('locations');
+    currentLocationId = prefs.getString('currentLocationId');
 
     if (likedJson != null) {
       final List<dynamic> likedList = jsonDecode(likedJson);
       likedLocations = likedList.map((json) => Location.fromJson(json)).toList();
       for (var location in likedLocations) {
-        location = location..isLiked = true;
+        location.isLiked = true;
       }
     }
 
@@ -90,33 +103,69 @@ class LocationManager extends ChangeNotifier {
       dislikedLocations = dislikedList.map((json) => Location.fromJson(json)).toList();
     }
 
+    if (locationsJson != null) {
+      final List<dynamic> locationsList = jsonDecode(locationsJson);
+      locations = locationsList.map((json) => Location.fromJson(json)).toList();
+    } else {
+      await loadLocations();
+    }
+
+    if (currentLocationId == null && locations.isNotEmpty) {
+      currentLocationId = locations.first.nom;
+    }
+
+    isLoading = false;
     notifyListeners();
   }
 
   Future<void> resetLikedLocations() async {
+    locations.addAll(likedLocations);
     for (var location in likedLocations) {
-      location = location..isLiked = false;
+      location.isLiked = false;
     }
     likedLocations.clear();
+    _moveToNextLocation();
     await saveState();
     notifyListeners();
   }
 
   Future<void> resetDislikedLocations() async {
+    locations.addAll(dislikedLocations);
     dislikedLocations.clear();
+    _moveToNextLocation();
     await saveState();
     notifyListeners();
   }
 
   List<Location> getVisibleLocations() {
     return locations.where((location) =>
-    !dislikedLocations.contains(location) && !likedLocations.contains(location)
+    !likedLocations.contains(location) && !dislikedLocations.contains(location)
     ).toList();
   }
 
-  void resetCurrentIndex() {
-    currentIndex = 0;
+  void unlikeLocation(Location location) {
+    likedLocations.remove(location);
+    locations.add(location);
+    location.isLiked = false;
+    saveState();
     notifyListeners();
   }
-}
 
+  bool get allLocationsVisited {
+    return locations.isEmpty && (likedLocations.isNotEmpty || dislikedLocations.isNotEmpty);
+  }
+
+  Location? getCurrentVisibleLocation() {
+    List<Location> visibleLocations = getVisibleLocations();
+    if (visibleLocations.isEmpty) {
+      return null;
+    }
+    if (currentLocationId != null) {
+      return visibleLocations.firstWhere(
+            (location) => location.nom == currentLocationId,
+        orElse: () => visibleLocations.first,
+      );
+    }
+    return visibleLocations.first;
+  }
+}
