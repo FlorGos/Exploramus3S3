@@ -372,7 +372,7 @@ class _SelectPageState extends State<SelectPage> {
           context.push('/planningpage', extra: selectedLocations);
         },
         tooltip: 'Add plan',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.map),
       ),
     );
   }
