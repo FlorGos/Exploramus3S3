@@ -21,7 +21,7 @@ class SelectPage extends StatefulWidget {
   State<SelectPage> createState() => _SelectPageState();
 }
 
-class _SelectPageState extends State<SelectPage> {
+class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateMixin {
   bool _permissionsChecked = false;
   Map<Location, bool> plans = {};
   List<Location> filteredLocations = [];
@@ -30,11 +30,27 @@ class _SelectPageState extends State<SelectPage> {
   Set<Categories> selectedCategories = Set<Categories>();
   Position? userPosition;
   double maxDistance = double.infinity;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeApp());
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -75,6 +91,7 @@ class _SelectPageState extends State<SelectPage> {
       await _loadPlans();
       await _getUserLocation();
       setState(() => _permissionsChecked = true);
+      _animationController.forward();
     } else {
       await _showPermissionDialog();
     }
@@ -226,11 +243,16 @@ class _SelectPageState extends State<SelectPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Permissions nécessaires'),
+              Text('Permissions nécessaires', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _checkPermissionsAndProceed,
                 child: Text('Vérifier les permissions'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
               ),
             ],
           ),
@@ -240,9 +262,10 @@ class _SelectPageState extends State<SelectPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           PopupMenuButton<SortOption>(
+            icon: Icon(Icons.sort),
             onSelected: (SortOption value) {
               setState(() {
                 currentSortOption = value;
@@ -274,95 +297,148 @@ class _SelectPageState extends State<SelectPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                  _sortAndFilterLocations();
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'Rechercher',
-                suffixIcon: Icon(Icons.search),
-              ),
-            ),
-          ),
-          Wrap(
-            spacing: 8.0,
-            children: Categories.values.map((category) {
-              return FilterChip(
-                label: Text(category.toString().split('.').last),
-                selected: selectedCategories.contains(category),
-                onSelected: (bool selected) {
+      body: FadeTransition(
+        opacity: _animation,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                onChanged: (value) {
                   setState(() {
-                    if (selected) {
-                      selectedCategories.add(category);
-                    } else {
-                      selectedCategories.remove(category);
-                    }
+                    searchQuery = value;
                     _sortAndFilterLocations();
                   });
                 },
-              );
-            }).toList(),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                Text('Distance maximale : ${maxDistance == double.infinity ? "Illimité" : (maxDistance / 1000).toStringAsFixed(1)} km'),
-                Slider(
-                  value: maxDistance == double.infinity ? 100000 : maxDistance,
-                  min: 0,
-                  max: 100000,
-                  divisions: 100,
-                  label: maxDistance == double.infinity ? 'Illimité' : '${(maxDistance / 1000).toStringAsFixed(1)} km',
-                  onChanged: (value) {
-                    setState(() {
-                      maxDistance = value == 100000 ? double.infinity : value;
-                      _sortAndFilterLocations();
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          CheckboxListTile(
-            title: Text('Sélectionner/Désélectionner tout'),
-            value: filteredLocations.isNotEmpty && filteredLocations.every((location) => plans[location] == true),
-            onChanged: filteredLocations.isEmpty ? null : _toggleAllLocations,
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: filteredLocations.length,
-              itemBuilder: (context, index) {
-                Location location = filteredLocations[index];
-                bool isCheck = plans[location] ?? false;
-                return ListTile(
-                  title: Text(location.nom),
-                  subtitle: Text(location.category.toString().split('.').last),
-                  trailing: Checkbox(
-                    value: isCheck,
-                    onChanged: (val) {
-                      if (val == false) {
-                        Provider.of<LocationManager>(context, listen: false).unlikeLocation(location);
-                      }
-                      setState(() {
-                        plans[location] = val ?? false;
-                      });
-                    },
+                decoration: InputDecoration(
+                  labelText: 'Rechercher',
+                  suffixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                ),
+              ),
             ),
-          ),
-        ],
+            Container(
+              height: 50,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                children: Categories.values.map((category) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(category.toString().split('.').last),
+                      selected: selectedCategories.contains(category),
+                      onSelected: (bool selected) {
+                        setState(() {
+                          if (selected) {
+                            selectedCategories.add(category);
+                          } else {
+                            selectedCategories.remove(category);
+                          }
+                          _sortAndFilterLocations();
+                        });
+                      },
+                      backgroundColor: Colors.grey[200],
+                      selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                      checkmarkColor: Theme.of(context).primaryColor,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    'Distance maximale : ${maxDistance == double.infinity ? "Illimité" : (maxDistance / 1000).toStringAsFixed(1)} km',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: Theme.of(context).primaryColor,
+                      inactiveTrackColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                      thumbColor: Theme.of(context).primaryColor,
+                      overlayColor: Theme.of(context).primaryColor.withOpacity(0.4),
+                      valueIndicatorColor: Theme.of(context).primaryColor,
+                      valueIndicatorTextStyle: TextStyle(color: Colors.white),
+                    ),
+                    child: Slider(
+                      value: maxDistance == double.infinity ? 100000 : maxDistance,
+                      min: 0,
+                      max: 100000,
+                      divisions: 100,
+                      label: maxDistance == double.infinity ? 'Illimité' : '${(maxDistance / 1000).toStringAsFixed(1)} km',
+                      onChanged: (value) {
+                        setState(() {
+                          maxDistance = value == 100000 ? double.infinity : value;
+                          _sortAndFilterLocations();
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            CheckboxListTile(
+              title: Text('Sélectionner/Désélectionner tout', style: TextStyle(fontWeight: FontWeight.bold)),
+              value: filteredLocations.isNotEmpty && filteredLocations.every((location) => plans[location] == true),
+              onChanged: filteredLocations.isEmpty ? null : _toggleAllLocations,
+              activeColor: Theme.of(context).primaryColor,
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: filteredLocations.length,
+                itemBuilder: (context, index) {
+                  Location location = filteredLocations[index];
+                  bool isCheck = plans[location] ?? false;
+                  return Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    elevation: 2,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.all(16),
+                      title: Text(location.nom, style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: 4),
+                          Text(location.category.toString().split('.').last),
+                          if (userPosition != null)
+                            Text(
+                              'Distance: ${(Geolocator.distanceBetween(
+                                  userPosition!.latitude,
+                                  userPosition!.longitude,
+                                  location.localization.lat!,
+                                  location.localization.lng!
+                              ) / 1000).toStringAsFixed(2)} km',
+                            ),
+                        ],
+                      ),
+                      trailing: Checkbox(
+                        value: isCheck,
+                        onChanged: (val) {
+                          if (val == false) {
+                            Provider.of<LocationManager>(context, listen: false).unlikeLocation(location);
+                          }
+                          setState(() {
+                            plans[location] = val ?? false;
+                          });
+                        },
+                        activeColor: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           List<Location> selectedLocations = plans.entries
               .where((entry) => entry.value)
@@ -371,8 +447,11 @@ class _SelectPageState extends State<SelectPage> {
 
           context.push('/planningpage', extra: selectedLocations);
         },
-        tooltip: 'Add plan',
-        child: const Icon(Icons.map),
+        tooltip: 'Créer un plan',
+        icon: Icon(Icons.map),
+        label: Text('Créer un plan'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
       ),
     );
   }

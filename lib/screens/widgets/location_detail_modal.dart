@@ -42,13 +42,13 @@ class _LocationDetailModalState extends State<LocationDetailModal> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: ListView(
         controller: widget.scrollController,
+        padding: EdgeInsets.all(20),
         children: [
           Center(
             child: Container(
@@ -67,46 +67,32 @@ class _LocationDetailModalState extends State<LocationDetailModal> {
           ),
           SizedBox(height: 10),
           Text(
-            widget.location.description ?? 'Pas de description disponible',
+            widget.location.description ?? 'No description available',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           SizedBox(height: 20),
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Adresse',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    widget.location.localization.adress ?? 'Adresse non disponible',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
+          Text(
+            'Address',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 5),
+          Text(
+            widget.location.localization.adress ?? 'Address not available',
+            style: TextStyle(fontSize: 16),
           ),
           SizedBox(height: 20),
           Text(
-            'Notes personnelles',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            'Notes',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 10),
           TextField(
             controller: _notesController,
             maxLines: 5,
             decoration: InputDecoration(
-              hintText: 'Ajoutez vos notes ici...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              hintText: 'Add your notes here...',
+              border: OutlineInputBorder(),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
               ),
             ),
@@ -116,16 +102,13 @@ class _LocationDetailModalState extends State<LocationDetailModal> {
             onPressed: () {
               _saveNotes();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Notes enregistrées !'),
-                  backgroundColor: Theme.of(context).primaryColor,
-                ),
+                SnackBar(content: Text('Notes saved!'), backgroundColor: Theme.of(context).primaryColor),
               );
             },
-            child: Text('Enregistrer les notes'),
+            child: Text('Save Notes'),
             style: ElevatedButton.styleFrom(
-              primary: Theme.of(context).primaryColor,
-              onPrimary: Colors.white,
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

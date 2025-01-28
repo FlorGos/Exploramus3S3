@@ -1,12 +1,13 @@
-import 'dart:math' show pi, sin, cos, sqrt, atan2, Random;
+import 'dart:math' show pi, sin, cos, sqrt, atan2;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:swipezone/screens/widgets/transparent_bottom_bar.dart';
+import 'package:swipezone/screens/widgets/location_detail_modal.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -22,42 +23,46 @@ class MapScreen extends StatefulWidget {
   _MapScreenState createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _isBarVisible = true;
   List<LatLng> _polylinePoints = [];
   bool _isAddingMarker = false;
   TransportMode? _selectedMode;
   bool _isLoadingRoute = false;
   Location? _movingLocation;
-  LatLng? _newPosition;
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  late List<Location> _initialLocations;
 
   @override
   void initState() {
     super.initState();
+    _initialLocations = widget.locations.map((loc) => loc.clone()).toList();
     _updatePolylinePoints();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void _toggleBarVisibility() {
     setState(() {
       _isBarVisible = !_isBarVisible;
-    });
-  }
-
-  void _onMapMoved() {
-    if (_isBarVisible) {
-      setState(() {
-        _isBarVisible = false;
-      });
-    }
-    _resetBarVisibilityTimer();
-  }
-
-  void _resetBarVisibilityTimer() {
-    Future.delayed(Duration(seconds: 2), () {
-      if (mounted && !_isBarVisible) {
-        setState(() {
-          _isBarVisible = true;
-        });
+      if (_isBarVisible) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
       }
     });
   }
@@ -72,7 +77,10 @@ class _MapScreenState extends State<MapScreen> {
       _isAddingMarker = true;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Cliquez sur la carte pour placer un nouveau marqueur')),
+      SnackBar(
+        content: Text('Tap on the map to add a new marker'),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
     );
   }
 
@@ -89,11 +97,11 @@ class _MapScreenState extends State<MapScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Ajouter un marqueur'),
-          content: Text('Voulez-vous ajouter un marqueur à cet endroit ?'),
+          title: Text('Add Marker'),
+          content: Text('Do you want to add a marker at this location?'),
           actions: <Widget>[
             TextButton(
-              child: Text('Annuler'),
+              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
                 setState(() {
@@ -102,12 +110,12 @@ class _MapScreenState extends State<MapScreen> {
               },
             ),
             TextButton(
-              child: Text('Ajouter'),
+              child: Text('Add'),
               onPressed: () async {
                 Navigator.of(context).pop();
                 final address = await _getStreetNameFromCoordinates(point.latitude, point.longitude);
                 Location newLocation = Location(
-                  nom: "Nouveau Marqueur",
+                  nom: "New Marker",
                   description: " ",
                   schedule: null,
                   contact: null,
@@ -134,7 +142,6 @@ class _MapScreenState extends State<MapScreen> {
       location.localization.lat = newPosition.latitude;
       location.localization.lng = newPosition.longitude;
       _movingLocation = null;
-      _newPosition = null;
     });
     _updatePolylinePoints();
     _updateLocationAddress(location);
@@ -160,11 +167,11 @@ class _MapScreenState extends State<MapScreen> {
         String country = place.country ?? '';
         return "$streetNumber $street, $postalCode $city, $country".trim();
       } else {
-        return "Coordonnées: $lat, $lng";
+        return "Coordinates: $lat, $lng";
       }
     } catch (e) {
-      print("Erreur lors de l'obtention de l'adresse: $e");
-      return " $lat, $lng";
+      print("Error getting address: $e");
+      return "$lat, $lng";
     }
   }
 
@@ -173,7 +180,7 @@ class _MapScreenState extends State<MapScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Lieux sélectionnés'),
+          title: Text('Selected Locations'),
           content: SingleChildScrollView(
             child: ListBody(
               children: widget.locations.map((location) =>
@@ -183,35 +190,7 @@ class _MapScreenState extends State<MapScreen> {
                     trailing: IconButton(
                       icon: Icon(Icons.delete),
                       onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext confirmContext) {
-                            return AlertDialog(
-                              title: Text('Confirmation'),
-                              content: Text('Voulez-vous vraiment supprimer ce lieu ?'),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: Text('Annuler'),
-                                  onPressed: () {
-                                    Navigator.of(confirmContext).pop();
-                                  },
-                                ),
-                                TextButton(
-                                  child: Text('Supprimer'),
-                                  onPressed: () {
-                                    setState(() {
-                                      widget.locations.remove(location);
-                                    });
-                                    _updatePolylinePoints();
-                                    Navigator.of(confirmContext).pop();
-                                    Navigator.of(context).pop();
-                                    _showLocationsList();
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        );
+                        _showDeleteConfirmationDialog(location);
                       },
                     ),
                   )
@@ -220,7 +199,7 @@ class _MapScreenState extends State<MapScreen> {
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Fermer'),
+              child: Text('Close'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -231,7 +210,60 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  double calculateDistance(LatLng start, LatLng end) {
+  void _showDeleteConfirmationDialog(Location location) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmation'),
+          content: Text('Are you sure you want to delete this location?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Delete'),
+              onPressed: () {
+                setState(() {
+                  widget.locations.remove(location);
+                });
+                _updatePolylinePoints();
+                Navigator.of(context).pop();
+                _showLocationsList();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
+    final sortedLocations = _sortLocationsByDistance();
+    final points = <LatLng>[widget.userPosition];
+
+    for (final location in sortedLocations) {
+      final end = LatLng(location.localization.lat!, location.localization.lng!);
+      points.add(end);
+    }
+
+    return points;
+  }
+
+  List<Location> _sortLocationsByDistance() {
+    final sortedLocations = List<Location>.from(widget.locations);
+    sortedLocations.sort((a, b) {
+      final distA = _calculateDistance(widget.userPosition, LatLng(a.localization.lat!, a.localization.lng!));
+      final distB = _calculateDistance(widget.userPosition, LatLng(b.localization.lat!, b.localization.lng!));
+      return distA.compareTo(distB);
+    });
+    return sortedLocations;
+  }
+
+  double _calculateDistance(LatLng start, LatLng end) {
     const R = 6371e3;
     final phi1 = start.latitude * pi / 180;
     final phi2 = end.latitude * pi / 180;
@@ -245,127 +277,95 @@ class _MapScreenState extends State<MapScreen> {
     return R * c;
   }
 
-  List<Location> sortLocationsByDistance() {
-    final sortedLocations = List<Location>.from(widget.locations);
-    sortedLocations.sort((a, b) {
-      final distA = calculateDistance(widget.userPosition, LatLng(a.localization.lat!, a.localization.lng!));
-      final distB = calculateDistance(widget.userPosition, LatLng(b.localization.lat!, b.localization.lng!));
-      return distA.compareTo(distB);
-    });
-    return sortedLocations;
-  }
-
-  List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
-    final sortedLocations = sortLocationsByDistance();
-    final points = <LatLng>[widget.userPosition];
-
-    for (final location in sortedLocations) {
-      final end = LatLng(location.localization.lat!, location.localization.lng!);
-      points.add(end);
-    }
-
-    return points;
-  }
-
   double _getTotalDistance() {
     double totalDistance = 0;
     for (int i = 0; i < _polylinePoints.length - 1; i++) {
-      totalDistance += calculateDistance(_polylinePoints[i], _polylinePoints[i + 1]);
+      totalDistance += _calculateDistance(_polylinePoints[i], _polylinePoints[i + 1]);
     }
     return totalDistance;
+  }
+
+  void _resetMarkers() {
+    setState(() {
+      for (int i = 0; i < widget.locations.length; i++) {
+        widget.locations[i].localization.lat = _initialLocations[i].localization.lat;
+        widget.locations[i].localization.lng = _initialLocations[i].localization.lng;
+      }
+      _movingLocation = null;
+      _updatePolylinePoints();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Marqueurs réinitialisés à leur position initiale'), backgroundColor: Theme.of(context).primaryColor),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Carte Flutter Map'),
+        title: const Text('Route Map'),
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Stack(
         children: [
-          GestureDetector(
-            onPanUpdate: (_) => _onMapMoved(),
-            child: FlutterMap(
-              options: MapOptions(
-                center: widget.userPosition,
-                zoom: 13.0,
-                onTap: _handleMapTap,
+          FlutterMap(
+            options: MapOptions(
+              center: widget.userPosition,
+              zoom: 13.0,
+              onTap: _handleMapTap,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c'],
               ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                ),
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _polylinePoints,
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _polylinePoints,
+                    color: Theme.of(context).primaryColor,
+                    strokeWidth: 4.0,
+                  ),
+                ],
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    width: 80.0,
+                    height: 80.0,
+                    point: widget.userPosition,
+                    builder: (ctx) => const Icon(
+                      Icons.my_location,
                       color: Colors.blue,
-                      strokeWidth: 3.0,
+                      size: 40.0,
                     ),
-                  ],
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
+                  ),
+                  ...widget.locations.map((location) {
+                    return Marker(
                       width: 80.0,
                       height: 80.0,
-                      point: widget.userPosition,
-                      builder: (ctx) => const Icon(
-                        Icons.my_location,
-                        color: Colors.blue,
-                        size: 40.0,
-                      ),
-                    ),
-                    ...widget.locations.map((location) {
-                      return Marker(
-                        width: 80.0,
-                        height: 80.0,
-                        point: LatLng(location.localization.lat!, location.localization.lng!),
-                        builder: (ctx) => GestureDetector(
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (BuildContext context) {
-                                return DraggableScrollableSheet(
-                                  initialChildSize: 0.6,
-                                  minChildSize: 0.3,
-                                  maxChildSize: 0.9,
-                                  expand: false,
-                                  builder: (_, controller) {
-                                    return LocationDetailModal(location: location, scrollController: controller);
-                                  },
-                                );
-                              },
-                            );
-                          },
-                          onLongPress: () {
-                            setState(() {
-                              _movingLocation = location;
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Déplacez le marqueur à sa nouvelle position'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          child: AnimatedContainer(
-                            duration: Duration(milliseconds: 300),
-                            child: Icon(
-                              Icons.location_pin,
-                              color: _movingLocation == location ? Colors.green : Colors.red,
-                              size: _movingLocation == location ? 50.0 : 40.0,
-                            ),
+                      point: LatLng(location.localization.lat!, location.localization.lng!),
+                      builder: (ctx) => GestureDetector(
+                        onTap: () {
+                          _showLocationDetailModal(location);
+                        },
+                        onLongPress: () {
+                          _startMovingMarker(location);
+                        },
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          child: Icon(
+                            Icons.location_on,
+                            color: _movingLocation == location ? Colors.green : Theme.of(context).primaryColor,
+                            size: _movingLocation == location ? 50.0 : 40.0,
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ],
-            ),
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ],
           ),
           Positioned(
             bottom: 16,
@@ -373,215 +373,79 @@ class _MapScreenState extends State<MapScreen> {
             child: FloatingActionButton(
               child: Icon(_isBarVisible ? Icons.visibility_off : Icons.visibility),
               onPressed: _toggleBarVisibility,
+              backgroundColor: Theme.of(context).primaryColor,
             ),
           ),
           if (_isLoadingRoute)
             Center(
-              child: CircularProgressIndicator(),
-            ),
-          if (_isBarVisible)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: TransparentBottomBar(
-                transportModes: [
-                  TransportMode(name: 'À pied', icon: Icons.directions_walk, speedKmPerHour: 5),
-                  TransportMode(name: 'Vélo', icon: Icons.directions_bike, speedKmPerHour: 15),
-                  TransportMode(name: 'Voiture', icon: Icons.directions_car, speedKmPerHour: 50),
-                  TransportMode(name: 'Transport en commun', icon: Icons.directions_bus, speedKmPerHour: 30),
-                ],
-                selectedMode: _selectedMode,
-                onListPressed: _showLocationsList,
-                onAddPressed: _addNewMarker,
-                totalDistance: _getTotalDistance(),
-                onTransportModeSelected: (mode) async {
-                  setState(() {
-                    _selectedMode = mode;
-                    _isLoadingRoute = true;
-                  });
-                  final newPoints = await Future.sync(() => _calculateSimulatedRoute(mode));
-                  setState(() {
-                    _polylinePoints = newPoints;
-                    _isLoadingRoute = false;
-                  });
-                },
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
               ),
             ),
+          SizeTransition(
+            sizeFactor: _animation,
+            axisAlignment: -1,
+            child: TransparentBottomBar(
+              transportModes: [
+                TransportMode(name: 'Walking', icon: Icons.directions_walk, speedKmPerHour: 5),
+                TransportMode(name: 'Cycling', icon: Icons.directions_bike, speedKmPerHour: 15),
+                TransportMode(name: 'Driving', icon: Icons.directions_car, speedKmPerHour: 50),
+                TransportMode(name: 'Transit', icon: Icons.directions_bus, speedKmPerHour: 30),
+              ],
+              selectedMode: _selectedMode,
+              onListPressed: _showLocationsList,
+              onAddPressed: _addNewMarker,
+              totalDistance: _getTotalDistance(),
+              onTransportModeSelected: _onTransportModeSelected,
+              onResetPressed: _resetMarkers,
+            ),
+          ),
         ],
       ),
     );
   }
-}
 
-class TransparentBottomBar extends StatelessWidget {
-  final List<TransportMode> transportModes;
-  final VoidCallback onListPressed;
-  final VoidCallback onAddPressed;
-  final double totalDistance;
-  final Function(TransportMode) onTransportModeSelected;
-  final TransportMode? selectedMode;
-
-  TransparentBottomBar({
-    required this.transportModes,
-    required this.onListPressed,
-    required this.onAddPressed,
-    required this.totalDistance,
-    required this.onTransportModeSelected,
-    this.selectedMode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            ...transportModes.map((mode) =>
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ElevatedButton.icon(
-                    icon: Icon(mode.icon, size: 16),
-                    label: Text(
-                      '${mode.name}\n${mode.getEstimatedTime(totalDistance)}',
-                      style: TextStyle(fontSize: 10),
-                      textAlign: TextAlign.center,
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mode == selectedMode ? Colors.blue : null,
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    ),
-                    onPressed: () {
-                      onTransportModeSelected(mode);
-                    },
-                  ),
-                )
-            ).toList(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ElevatedButton.icon(
-                icon: Icon(Icons.list, size: 16),
-                label: Text('Liste', style: TextStyle(fontSize: 10)),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                onPressed: onListPressed,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ElevatedButton.icon(
-                icon: Icon(Icons.add_location, size: 16),
-                label: Text('Ajouter', style: TextStyle(fontSize: 10)),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                onPressed: onAddPressed,
-              ),
-            ),
-          ],
-        ),
-      ),
+  void _showLocationDetailModal(Location location) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (_, controller) {
+            return LocationDetailModal(location: location, scrollController: controller);
+          },
+        );
+      },
     );
   }
-}
 
-class TransportMode {
-  final String name;
-  final IconData icon;
-  final double speedKmPerHour;
-
-  TransportMode({required this.name, required this.icon, required this.speedKmPerHour});
-
-  String getEstimatedTime(double distanceInMeters) {
-    double timeInHours = distanceInMeters / 1000 / speedKmPerHour;
-    int minutes = (timeInHours * 60).round();
-    return '$minutes min';
-  }
-}
-
-class LocationDetailModal extends StatefulWidget {
-  final Location location;
-  final ScrollController scrollController;
-
-  const LocationDetailModal({
-    Key? key,
-    required this.location,
-    required this.scrollController
-  }) : super(key: key);
-
-  @override
-  _LocationDetailModalState createState() => _LocationDetailModalState();
-}
-
-class _LocationDetailModalState extends State<LocationDetailModal> {
-  TextEditingController _notesController = TextEditingController();
-  String? _savedNotes;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadNotes();
-  }
-
-  Future<void> _loadNotes() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  void _startMovingMarker(Location location) {
     setState(() {
-      _savedNotes = prefs.getString('notes_${widget.location.nom}') ?? '';
-      _notesController.text = _savedNotes!;
+      _movingLocation = location;
     });
-  }
-
-  Future<void> _saveNotes() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('notes_${widget.location.nom}', _notesController.text);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      child: ListView(
-        controller: widget.scrollController,
-        children: [
-          Text(
-            widget.location.nom,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 10),
-          Text(widget.location.description ?? 'Pas de description disponible'),
-          SizedBox(height: 10),
-          Text(
-            'Adresse: ${widget.location.localization.adress ?? 'Adresse non disponible'}',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 20),
-          TextField(
-            controller: _notesController,
-            maxLines: 5,
-            decoration: InputDecoration(
-              labelText: 'Notes',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              _saveNotes();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Notes enregistrées !')),
-              );
-            },
-            child: Text('Enregistrer les notes'),
-          ),
-        ],
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Tap on the map to move the marker'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Theme.of(context).primaryColor,
       ),
     );
+  }
+
+  void _onTransportModeSelected(TransportMode mode) async {
+    setState(() {
+      _selectedMode = mode;
+      _isLoadingRoute = true;
+    });
+    final newPoints = await Future.sync(() => _calculateSimulatedRoute(mode));
+    setState(() {
+      _polylinePoints = newPoints;
+      _isLoadingRoute = false;
+    });
   }
 }
 

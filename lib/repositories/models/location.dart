@@ -39,6 +39,23 @@ class Location {
       'isLiked': isLiked,
     };
   }
+  Location clone() {
+    return Location(
+      nom: this.nom,
+      description: this.description,
+      schedule: this.schedule,
+      contact: this.contact,
+      imageUrl: this.imageUrl,
+      category: this.category,
+      website: this.website,
+      localization: Localization(
+        this.localization.adress,
+        this.localization.lat,
+        this.localization.lng,
+      ),
+      isLiked: this.isLiked,
+    );
+  }
 
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
