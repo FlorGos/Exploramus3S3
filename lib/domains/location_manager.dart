@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/repositories/location_repository_implementation.dart';
 
-class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
+class LocationManager extends ChangeNotifier {
   static final LocationManager _instance = LocationManager._internal();
 
   LocationManager._internal();
@@ -18,7 +18,6 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
   List<Location> dislikedLocations = [];
   int currentIndex = 0;
 
-  // Getter for filters
   Map<Location, bool> get filters {
     return Map.fromIterable(
       locations,
@@ -29,16 +28,16 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
 
   Future<void> loadLocations() async {
     locations = await ILocationRepository().getLocations();
-    notifyListeners(); // Notify listeners when locations are loaded
+    notifyListeners();
   }
 
   void like() {
     if (currentIndex < locations.length) {
-      locations[currentIndex].isLiked = true;
+      locations[currentIndex] = locations[currentIndex]..isLiked = true;
       likedLocations.add(locations[currentIndex]);
       next();
       saveState();
-      notifyListeners(); // Notify listeners after liking a location
+      notifyListeners();
     }
   }
 
@@ -47,7 +46,7 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
       dislikedLocations.add(locations[currentIndex]);
       next();
       saveState();
-      notifyListeners(); // Notify listeners after disliking a location
+      notifyListeners();
     }
   }
 
@@ -64,7 +63,7 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
   }
 
   Future<void> loadState() async {
-    await loadLocations(); // Ensure locations are loaded
+    await loadLocations();
     final prefs = await SharedPreferences.getInstance();
     final likedJson = prefs.getString('likedLocations');
     final dislikedJson = prefs.getString('dislikedLocations');
@@ -73,7 +72,7 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
       final List<dynamic> likedList = jsonDecode(likedJson);
       likedLocations = likedList.map((json) => Location.fromJson(json)).toList();
       for (var location in likedLocations) {
-        location.isLiked = true;
+        location = location..isLiked = true;
       }
     }
 
@@ -82,22 +81,22 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
       dislikedLocations = dislikedList.map((json) => Location.fromJson(json)).toList();
     }
 
-    notifyListeners(); // Notify listeners after loading state
+    notifyListeners();
   }
 
   Future<void> resetLikedLocations() async {
     for (var location in likedLocations) {
-      location.isLiked = false;
+      location = location..isLiked = false;
     }
     likedLocations.clear();
     await saveState();
-    notifyListeners(); // Notify listeners after resetting liked locations
+    notifyListeners();
   }
 
   Future<void> resetDislikedLocations() async {
     dislikedLocations.clear();
     await saveState();
-    notifyListeners(); // Notify listeners after resetting disliked locations
+    notifyListeners();
   }
 
   List<Location> getVisibleLocations() {
@@ -110,3 +109,4 @@ class LocationManager extends ChangeNotifier { // Extend ChangeNotifier
     currentIndex = 0;
   }
 }
+
