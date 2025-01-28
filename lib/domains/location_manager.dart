@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:swipezone/repositories/models/location.dart';
@@ -33,8 +33,10 @@ class LocationManager extends ChangeNotifier {
 
   void like() {
     if (currentIndex < locations.length) {
-      locations[currentIndex] = locations[currentIndex]..isLiked = true;
-      likedLocations.add(locations[currentIndex]);
+      Location likedLocation = locations[currentIndex]..isLiked = true;
+      if (!likedLocations.contains(likedLocation)) {
+        likedLocations.add(likedLocation);
+      }
       next();
       saveState();
       notifyListeners();
@@ -48,6 +50,13 @@ class LocationManager extends ChangeNotifier {
       saveState();
       notifyListeners();
     }
+  }
+
+  void unlikeLocation(Location location) {
+    likedLocations.remove(location);
+    location.isLiked = false;
+    saveState();
+    notifyListeners();
   }
 
   void next() {
@@ -107,6 +116,7 @@ class LocationManager extends ChangeNotifier {
 
   void resetCurrentIndex() {
     currentIndex = 0;
+    notifyListeners();
   }
 }
 

@@ -25,43 +25,6 @@ class SettingsPage extends StatelessWidget {
             title: Text('Réinitialiser les lieux likés'),
             trailing: ElevatedButton(
               child: Text('Réinitialiser'),
-                // Inside SettingsPage
-                onPressed: () async {
-                  bool? confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: Text('Confirmation'),
-                        content: Text('Êtes-vous sûr de vouloir réinitialiser la liste des lieux likés ?'),
-                        actions: <Widget>[
-                          TextButton(
-                            child: Text('Annuler'),
-                            onPressed: () => Navigator.of(context).pop(false),
-                          ),
-                          TextButton(
-                            child: Text('Réinitialiser'),
-                            onPressed: () => Navigator.of(context).pop(true),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-
-                  if (confirm == true) {
-                    await LocationManager().resetLikedLocations();
-                    // Notify HomePage and SelectPage to refresh their data
-                    Provider.of<LocationManager>(context, listen: false).notifyListeners();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('La liste des lieux likés a été réinitialisée')),
-                    );
-                  }
-                }
-            ),
-          ),
-          ListTile(
-            title: Text('Réinitialiser les lieux dislikés'),
-            trailing: ElevatedButton(
-              child: Text('Réinitialiser les lieux likés'),
               onPressed: () async {
                 bool? confirm = await showDialog<bool>(
                   context: context,
@@ -91,7 +54,40 @@ class SettingsPage extends StatelessWidget {
                 }
               },
             ),
+          ),
+          ListTile(
+            title: Text('Réinitialiser les lieux dislikés'),
+            trailing: ElevatedButton(
+              child: Text('Réinitialiser'),
+              onPressed: () async {
+                bool? confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Confirmation'),
+                      content: Text('Êtes-vous sûr de vouloir réinitialiser la liste des lieux dislikés ?'),
+                      actions: <Widget>[
+                        TextButton(
+                          child: Text('Annuler'),
+                          onPressed: () => Navigator.of(context).pop(false),
+                        ),
+                        TextButton(
+                          child: Text('Réinitialiser'),
+                          onPressed: () => Navigator.of(context).pop(true),
+                        ),
+                      ],
+                    );
+                  },
+                );
 
+                if (confirm == true) {
+                  await Provider.of<LocationManager>(context, listen: false).resetDislikedLocations();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('La liste des lieux dislikés a été réinitialisée')),
+                  );
+                }
+              },
+            ),
           ),
         ],
       ),

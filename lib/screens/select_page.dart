@@ -8,7 +8,7 @@ import 'package:swipezone/repositories/models/categories.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:flutter/services.dart';
-
+import 'package:provider/provider.dart';
 
 enum SortOption { NameAZ, NameZA, TypeAZ, TypeZA, Proximity }
 
@@ -29,14 +29,12 @@ class _SelectPageState extends State<SelectPage> {
   SortOption currentSortOption = SortOption.NameAZ;
   Set<Categories> selectedCategories = Set<Categories>();
   Position? userPosition;
-  double maxDistance = double.infinity; // Distance maximale pour le filtrage
+  double maxDistance = double.infinity;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeApp());
-    _loadPlans();
-    _getUserLocation();
   }
 
   @override
@@ -54,6 +52,7 @@ class _SelectPageState extends State<SelectPage> {
       await _checkPermissionsAndProceed();
     }
   }
+
   Future<bool> _isFirstLaunch() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool isFirstLaunch = prefs.getBool('first_launch') ?? true;
@@ -67,8 +66,6 @@ class _SelectPageState extends State<SelectPage> {
     Map<Permission, PermissionStatus> statuses = await [
       Permission.location,
     ].request();
-
-    // Retourne true si toutes les permissions sont accordées, sinon false
     return statuses.values.every((status) => status.isGranted);
   }
 
@@ -94,7 +91,7 @@ class _SelectPageState extends State<SelectPage> {
           actions: <Widget>[
             TextButton(
               child: Text('Quitter'),
-              onPressed: () => SystemNavigator.pop(), // Quitte l'application
+              onPressed: () => SystemNavigator.pop(),
             ),
             TextButton(
               child: Text('Accorder'),
@@ -112,7 +109,6 @@ class _SelectPageState extends State<SelectPage> {
     );
   }
 
-
   Future<void> _showOpenSettingsDialog() async {
     showDialog(
       context: context,
@@ -125,13 +121,13 @@ class _SelectPageState extends State<SelectPage> {
             TextButton(
               child: Text('Annuler'),
               onPressed: () {
-                Navigator.of(context).pop(); // Ferme le dialogue
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
               child: Text('Ouvrir les paramètres'),
               onPressed: () async {
-                Navigator.of(context).pop(); // Ferme le dialogue
+                Navigator.of(context).pop();
                 await AppSettings.openAppSettings();
               },
             ),
@@ -142,10 +138,15 @@ class _SelectPageState extends State<SelectPage> {
   }
 
   Future<void> _loadPlans() async {
-    Map<Location, bool> fetchedPlans = LocationManager().filters;
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
+    await locationManager.loadState();
     setState(() {
-      plans = fetchedPlans;
-      filteredLocations = plans.keys.toList();
+      plans = Map.fromIterable(
+        locationManager.likedLocations,
+        key: (location) => location,
+        value: (location) => true,
+      );
+      filteredLocations = locationManager.likedLocations;
       _sortAndFilterLocations();
     });
   }
@@ -155,7 +156,7 @@ class _SelectPageState extends State<SelectPage> {
       Position position = await Geolocator.getCurrentPosition();
       setState(() {
         userPosition = position;
-        _sortAndFilterLocations(); // Appel pour trier et filtrer après avoir obtenu la position
+        _sortAndFilterLocations();
       });
     } catch (e) {
       print("Error getting user location: $e");
@@ -168,7 +169,6 @@ class _SelectPageState extends State<SelectPage> {
           location.category.toString().toLowerCase().contains(searchQuery.toLowerCase());
       bool matchesCategory = selectedCategories.isEmpty || selectedCategories.contains(location.category);
 
-      // Filtrage par proximité
       bool matchesProximity = true;
       if (userPosition != null && maxDistance != double.infinity) {
         double distance = Geolocator.distanceBetween(
@@ -181,7 +181,6 @@ class _SelectPageState extends State<SelectPage> {
       return matchesSearch && matchesCategory && matchesProximity;
     }).toList();
 
-    // Tri des lieux après filtrage
     filteredLocations.sort((a, b) {
       switch (currentSortOption) {
         case SortOption.NameAZ:
@@ -204,17 +203,16 @@ class _SelectPageState extends State<SelectPage> {
             );
             return distanceA.compareTo(distanceB);
           }
-          return 0; // Si la position de l'utilisateur n'est pas disponible
+          return 0;
       }
     });
 
-    // Mettre à jour l'état des cases à cocher après le filtrage
     setState(() {});
   }
 
   void _toggleAllLocations(bool? value) {
     setState(() {
-      for (var key in filteredLocations) { // Ne sélectionner que les lieux visibles
+      for (var key in filteredLocations) {
         plans[key] = value ?? false;
       }
     });
@@ -312,22 +310,20 @@ class _SelectPageState extends State<SelectPage> {
               );
             }).toList(),
           ),
-
-          // Slider pour le filtrage par proximité
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
               children: [
                 Text('Distance maximale : ${maxDistance == double.infinity ? "Illimité" : (maxDistance / 1000).toStringAsFixed(1)} km'),
                 Slider(
-                  value: maxDistance == double.infinity ? 100 : maxDistance,
+                  value: maxDistance == double.infinity ? 100000 : maxDistance,
                   min: 0,
-                  max: 100000, // Maximum de 100 km
+                  max: 100000,
                   divisions: 100,
                   label: maxDistance == double.infinity ? 'Illimité' : '${(maxDistance / 1000).toStringAsFixed(1)} km',
                   onChanged: (value) {
                     setState(() {
-                      maxDistance = value == 100000 ? double.infinity : value; // Illimité si maximum atteint
+                      maxDistance = value == 100000 ? double.infinity : value;
                       _sortAndFilterLocations();
                     });
                   },
@@ -335,13 +331,11 @@ class _SelectPageState extends State<SelectPage> {
               ],
             ),
           ),
-
           CheckboxListTile(
             title: Text('Sélectionner/Désélectionner tout'),
             value: filteredLocations.isNotEmpty && filteredLocations.every((location) => plans[location] == true),
             onChanged: filteredLocations.isEmpty ? null : _toggleAllLocations,
           ),
-
           Expanded(
             child: ListView.builder(
               itemCount: filteredLocations.length,
@@ -354,6 +348,9 @@ class _SelectPageState extends State<SelectPage> {
                   trailing: Checkbox(
                     value: isCheck,
                     onChanged: (val) {
+                      if (val == false) {
+                        Provider.of<LocationManager>(context, listen: false).unlikeLocation(location);
+                      }
                       setState(() {
                         plans[location] = val ?? false;
                       });
@@ -365,7 +362,6 @@ class _SelectPageState extends State<SelectPage> {
           ),
         ],
       ),
-
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           List<Location> selectedLocations = plans.entries
@@ -380,5 +376,5 @@ class _SelectPageState extends State<SelectPage> {
       ),
     );
   }
-
 }
+
