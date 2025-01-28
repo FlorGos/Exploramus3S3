@@ -9,6 +9,8 @@ import 'package:swipezone/theme/theme.dart';
 import 'package:swipezone/theme/theme_provider.dart';
 import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/screens/SettingsPage.dart';
+import 'package:swipezone/domains/location_manager.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,8 +18,11 @@ void main() async {
   final pref = await SharedPreferences.getInstance();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(pref: pref),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LocationManager()), // Assurez-vous d'ajouter ce provider
+        ChangeNotifierProvider(create: (_) => ThemeProvider(pref: pref)),
+      ],
       child: MyApp(),
     ),
   );
