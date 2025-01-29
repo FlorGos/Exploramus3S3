@@ -16,6 +16,8 @@ class LocationManager extends ChangeNotifier {
   List<Location> locations = [];
   List<Location> likedLocations = [];
   List<Location> dislikedLocations = [];
+  List<Location> favoriteLocations = [];
+  List<Location> _history = [];
   String? currentLocationId;
   bool isLoading = true;
 
@@ -30,7 +32,6 @@ class LocationManager extends ChangeNotifier {
   Future<void> loadLocations() async {
     if (locations.isEmpty) {
       List<Location> allLocations = await ILocationRepository().getLocations();
-      // Éliminer les doublons basés sur le nom du lieu
       locations = allLocations.toSet().toList();
     }
     notifyListeners();
@@ -42,6 +43,7 @@ class LocationManager extends ChangeNotifier {
       currentLocation.isLiked = true;
       likedLocations.add(currentLocation);
       locations.remove(currentLocation);
+      _history.add(currentLocation);
       _moveToNextLocation();
       saveState();
       notifyListeners();
@@ -53,10 +55,43 @@ class LocationManager extends ChangeNotifier {
     if (currentLocation != null) {
       dislikedLocations.add(currentLocation);
       locations.remove(currentLocation);
+      _history.add(currentLocation);
       _moveToNextLocation();
       saveState();
       notifyListeners();
     }
+  }
+
+  void favorite() {
+    Location? currentLocation = getCurrentVisibleLocation();
+    if (currentLocation != null) {
+      currentLocation.isLiked = true;
+      favoriteLocations.add(currentLocation);
+      likedLocations.add(currentLocation);
+      locations.remove(currentLocation);
+      _history.add(currentLocation);
+      _moveToNextLocation();
+      saveState();
+      notifyListeners();
+    }
+  }
+
+  Location? undo() {
+    if (_history.isNotEmpty) {
+      Location lastLocation = _history.removeLast();
+      if (likedLocations.remove(lastLocation)) {
+        lastLocation.isLiked = false;
+      } else if (dislikedLocations.remove(lastLocation)) {
+        // Do nothing, just remove from disliked
+      }
+      favoriteLocations.remove(lastLocation);
+      locations.insert(0, lastLocation);
+      currentLocationId = lastLocation.nom;
+      saveState();
+      notifyListeners();
+      return lastLocation;
+    }
+    return null;
   }
 
   void _moveToNextLocation() {
@@ -72,6 +107,7 @@ class LocationManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('likedLocations', jsonEncode(likedLocations.map((e) => e.toJson()).toList()));
     await prefs.setString('dislikedLocations', jsonEncode(dislikedLocations.map((e) => e.toJson()).toList()));
+    await prefs.setString('favoriteLocations', jsonEncode(favoriteLocations.map((e) => e.toJson()).toList()));
     await prefs.setString('locations', jsonEncode(locations.map((e) => e.toJson()).toList()));
     if (currentLocationId != null) {
       await prefs.setString('currentLocationId', currentLocationId!);
@@ -87,6 +123,7 @@ class LocationManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final likedJson = prefs.getString('likedLocations');
     final dislikedJson = prefs.getString('dislikedLocations');
+    final favoriteJson = prefs.getString('favoriteLocations');
     final locationsJson = prefs.getString('locations');
     currentLocationId = prefs.getString('currentLocationId');
 
@@ -101,6 +138,11 @@ class LocationManager extends ChangeNotifier {
     if (dislikedJson != null) {
       final List<dynamic> dislikedList = jsonDecode(dislikedJson);
       dislikedLocations = dislikedList.map((json) => Location.fromJson(json)).toList();
+    }
+
+    if (favoriteJson != null) {
+      final List<dynamic> favoriteList = jsonDecode(favoriteJson);
+      favoriteLocations = favoriteList.map((json) => Location.fromJson(json)).toList();
     }
 
     if (locationsJson != null) {
@@ -139,7 +181,9 @@ class LocationManager extends ChangeNotifier {
 
   List<Location> getVisibleLocations() {
     return locations.where((location) =>
-    !likedLocations.contains(location) && !dislikedLocations.contains(location)
+    !likedLocations.contains(location) &&
+        !dislikedLocations.contains(location) &&
+        !favoriteLocations.contains(location)
     ).toList();
   }
 
@@ -151,8 +195,15 @@ class LocationManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeFromDisliked(Location location) {
+    dislikedLocations.remove(location);
+    locations.add(location);
+    saveState();
+    notifyListeners();
+  }
+
   bool get allLocationsVisited {
-    return locations.isEmpty && (likedLocations.isNotEmpty || dislikedLocations.isNotEmpty);
+    return locations.isEmpty && (likedLocations.isNotEmpty || dislikedLocations.isNotEmpty || favoriteLocations.isNotEmpty);
   }
 
   Location? getCurrentVisibleLocation() {
@@ -169,3 +220,4 @@ class LocationManager extends ChangeNotifier {
     return visibleLocations.first;
   }
 }
+

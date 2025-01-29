@@ -4,11 +4,9 @@ import 'package:swipezone/domains/location_manager.dart';
 import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/screens/select_page.dart';
 import 'package:swipezone/screens/SettingsPage.dart';
-import 'package:swipezone/screens/widgets/map_page.dart';
-import 'package:latlong2/latlong.dart'; // Import for LatLng
 import 'package:swipezone/screens/pedometer_page.dart';
 import 'package:swipezone/screens/nfc_page.dart';
-
+import 'package:swipezone/screens/location_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key, required String title}) : super(key: key);
@@ -19,21 +17,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late LocationManager _locationManager;
-  late PageController _pageController;
+  List<Location> _locations = [];
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _locationManager = Provider.of<LocationManager>(context, listen: false);
-    _pageController = PageController(viewportFraction: 0.85);
     _loadLocations();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -48,33 +45,52 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _loadLocations() async {
     await _locationManager.loadState();
-    if (_locationManager.currentLocationId != null) {
-      int index = _locationManager.getVisibleLocations().indexWhere(
-            (location) => location.nom == _locationManager.currentLocationId,
-      );
-      if (index != -1) {
-        _pageController.jumpToPage(index);
+    setState(() {
+      _locations = _locationManager.getVisibleLocations();
+      if (_locationManager.currentLocationId != null) {
+        _currentIndex = _locations.indexWhere(
+              (location) => location.nom == _locationManager.currentLocationId,
+        );
+        if (_currentIndex == -1) _currentIndex = 0;
       }
-    }
-    setState(() {});
+    });
   }
 
   void _handleLike() {
     _locationManager.like();
-    if (_locationManager.allLocationsVisited) {
-      _showAllLocationsVisitedDialog();
-    } else {
-      _pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
-    }
+    _moveToNextCard();
   }
 
   void _handleDislike() {
     _locationManager.dislike();
-    if (_locationManager.allLocationsVisited) {
-      _showAllLocationsVisitedDialog();
-    } else {
-      _pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
-    }
+    _moveToNextCard();
+  }
+
+  void _handleFavorite() {
+    _locationManager.favorite();
+    _moveToNextCard();
+  }
+
+  void _moveToNextCard() {
+    setState(() {
+      if (_currentIndex < _locations.length - 1) {
+        _currentIndex++;
+      } else {
+        _showAllLocationsVisitedDialog();
+      }
+    });
+  }
+
+  void _handleUndo() {
+    setState(() {
+      if (_currentIndex > 0) {
+        _currentIndex--;
+      }
+      Location? lastLocation = _locationManager.undo();
+      if (lastLocation != null) {
+        _locations.insert(0, lastLocation);
+      }
+    });
   }
 
   void _showAllLocationsVisitedDialog() {
@@ -107,7 +123,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void _resetLocations() async {
     await _locationManager.resetLikedLocations();
     await _locationManager.resetDislikedLocations();
-    setState(() {});
+    _loadLocations();
   }
 
   Widget _buildLocationCard(Location location) {
@@ -120,48 +136,90 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              child: location.imageUrl != null
-                  ? Image.network(
-                location.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  location.imageUrl != null
+                      ? Image.network(
+                    location.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
+                      );
+                    },
+                  )
+                      : Container(
                     color: Colors.grey[300],
                     child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
-                  );
-                },
-              )
-                  : Container(
-                color: Colors.grey[300],
-                child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                        ),
+                      ),
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            location.nom,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Catégorie: ${location.category.toString().split('.').last}',
+                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  location.nom,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Catégorie: ${location.category.toString().split('.').last}',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  location.description ?? 'Aucune description disponible',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: Text(
+              location.description ?? 'Aucune description disponible',
+              style: TextStyle(fontSize: 16),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white),
+          SizedBox(height: 4),
+          Text(label, style: TextStyle(color: Colors.white, fontSize: 12)),
+        ],
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        shape: CircleBorder(),
+        padding: EdgeInsets.all(16),
       ),
     );
   }
@@ -178,126 +236,86 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
         child: SafeArea(
-          child: Consumer<LocationManager>(
-            builder: (context, locationManager, child) {
-              if (locationManager.isLoading) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              if (locationManager.allLocationsVisited) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Vous avez vu tous les lieux !',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 20),
-                      ElevatedButton(
-                        child: Text('Réinitialiser et recommencer'),
-                        onPressed: _resetLocations,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                      ),
-                    ],
+          child: Column(
+            children: [
+              AppBar(
+                title: Text('SwipeZone', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                actions: [
+                  IconButton(
+                    icon: Icon(Icons.directions_walk, color: Colors.black87),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => PedometerPage()),
+                      );
+                    },
                   ),
-                );
-              }
-
-              List<Location> visibleLocations = locationManager.getVisibleLocations();
-
-              return Column(
-                children: [
-                  AppBar(
-                    title: Text('SwipeZone', style: TextStyle(color: Colors.black87)),
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    actions: [
-                      IconButton(
-                        icon: Icon(Icons.directions_walk, color: Colors.black87),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => PedometerPage()),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.nfc, color: Colors.black87),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => NFCPage()),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.map, color: Colors.black87),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => SelectPage(title: 'Sélection')),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.settings, color: Colors.black87),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => SettingsPage()),
-                          ).then((_) => setState(() {}));
-                        },
-                      ),
-                    ],
+                  IconButton(
+                    icon: Icon(Icons.nfc, color: Colors.black87),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => NFCPage()),
+                      );
+                    },
                   ),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: visibleLocations.length,
-                      itemBuilder: (context, index) {
-                        return _buildLocationCard(visibleLocations[index]);
-                      },
-                      onPageChanged: (index) {
-                        locationManager.currentLocationId = visibleLocations[index].nom;
-                      },
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.map, color: Colors.black87),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SelectPage(title: 'Sélection')),
+                      );
+                    },
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: _handleDislike,
-                          icon: Icon(Icons.thumb_down, color: Colors.white),
-                          label: Text('Pas intéressé'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _handleLike,
-                          icon: Icon(Icons.thumb_up, color: Colors.white),
-                          label: Text('Intéressé'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          ),
-                        ),
-                      ],
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.settings, color: Colors.black87),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SettingsPage()),
+                      ).then((_) => setState(() {}));
+                    },
                   ),
                 ],
-              );
-            },
+              ),
+              Expanded(
+                child: _locations.isEmpty
+                    ? Center(child: Text('Aucun lieu disponible'))
+                    : GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (details.primaryVelocity! > 0) {
+                      _handleLike();
+                    } else if (details.primaryVelocity! < 0) {
+                      _handleDislike();
+                    }
+                  },
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity! < 0) {
+                      _handleFavorite();
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _buildLocationCard(_locations[_currentIndex]),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildActionButton(Icons.thumb_down, 'Pas intéressé', Colors.red, _handleDislike),
+                    _buildActionButton(Icons.undo, 'Retour', Colors.orange, _handleUndo),
+                    _buildActionButton(Icons.thumb_up, 'Intéressé', Colors.green, _handleLike),
+                    _buildActionButton(Icons.star, 'Favori', Colors.blue, _handleFavorite),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

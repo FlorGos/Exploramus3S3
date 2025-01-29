@@ -15,7 +15,7 @@ enum SortOption { NameAZ, NameZA, TypeAZ, TypeZA, Proximity }
 class SelectPage extends StatefulWidget {
   final String title;
 
-  const SelectPage({super.key, required this.title});
+  const SelectPage({Key? key, required this.title}) : super(key: key);
 
   @override
   State<SelectPage> createState() => _SelectPageState();
@@ -25,6 +25,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
   bool _permissionsChecked = false;
   Map<Location, bool> plans = {};
   List<Location> filteredLocations = [];
+  List<Location> favoriteLocations = [];
   String searchQuery = '';
   SortOption currentSortOption = SortOption.NameAZ;
   Set<Categories> selectedCategories = Set<Categories>();
@@ -164,6 +165,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         value: (location) => true,
       );
       filteredLocations = locationManager.likedLocations;
+      favoriteLocations = locationManager.favoriteLocations;
       _sortAndFilterLocations();
     });
   }
@@ -259,199 +261,214 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         ),
       );
     }
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          PopupMenuButton<SortOption>(
-            icon: Icon(Icons.sort),
-            onSelected: (SortOption value) {
-              setState(() {
-                currentSortOption = value;
-                _sortAndFilterLocations();
-              });
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
-              const PopupMenuItem<SortOption>(
-                value: SortOption.NameAZ,
-                child: Text('Nom A-Z'),
-              ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.NameZA,
-                child: Text('Nom Z-A'),
-              ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.TypeAZ,
-                child: Text('Type A-Z'),
-              ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.TypeZA,
-                child: Text('Type Z-A'),
-              ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.Proximity,
-                child: Text('Par proximité'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: FadeTransition(
-        opacity: _animation,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                onChanged: (value) {
-                  setState(() {
-                    searchQuery = value;
-                    _sortAndFilterLocations();
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Rechercher',
-                  suffixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[200],
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          title: Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            PopupMenuButton<SortOption>(
+              icon: Icon(Icons.sort),
+              onSelected: (SortOption value) {
+                setState(() {
+                  currentSortOption = value;
+                  _sortAndFilterLocations();
+                });
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+                const PopupMenuItem<SortOption>(
+                  value: SortOption.NameAZ,
+                  child: Text('Nom A-Z'),
                 ),
-              ),
-            ),
-            Container(
-              height: 50,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                children: Categories.values.map((category) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(category.toString().split('.').last),
-                      selected: selectedCategories.contains(category),
-                      onSelected: (bool selected) {
-                        setState(() {
-                          if (selected) {
-                            selectedCategories.add(category);
-                          } else {
-                            selectedCategories.remove(category);
-                          }
-                          _sortAndFilterLocations();
-                        });
-                      },
-                      backgroundColor: Colors.grey[200],
-                      selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                      checkmarkColor: Theme.of(context).primaryColor,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text(
-                    'Distance maximale : ${maxDistance == double.infinity ? "Illimité" : (maxDistance / 1000).toStringAsFixed(1)} km',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: Theme.of(context).primaryColor,
-                      inactiveTrackColor: Theme.of(context).primaryColor.withOpacity(0.3),
-                      thumbColor: Theme.of(context).primaryColor,
-                      overlayColor: Theme.of(context).primaryColor.withOpacity(0.4),
-                      valueIndicatorColor: Theme.of(context).primaryColor,
-                      valueIndicatorTextStyle: TextStyle(color: Colors.white),
-                    ),
-                    child: Slider(
-                      value: maxDistance == double.infinity ? 100000 : maxDistance,
-                      min: 0,
-                      max: 100000,
-                      divisions: 100,
-                      label: maxDistance == double.infinity ? 'Illimité' : '${(maxDistance / 1000).toStringAsFixed(1)} km',
-                      onChanged: (value) {
-                        setState(() {
-                          maxDistance = value == 100000 ? double.infinity : value;
-                          _sortAndFilterLocations();
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            CheckboxListTile(
-              title: Text('Sélectionner/Désélectionner tout', style: TextStyle(fontWeight: FontWeight.bold)),
-              value: filteredLocations.isNotEmpty && filteredLocations.every((location) => plans[location] == true),
-              onChanged: filteredLocations.isEmpty ? null : _toggleAllLocations,
-              activeColor: Theme.of(context).primaryColor,
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredLocations.length,
-                itemBuilder: (context, index) {
-                  Location location = filteredLocations[index];
-                  bool isCheck = plans[location] ?? false;
-                  return Card(
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    elevation: 2,
-                    child: ListTile(
-                      contentPadding: EdgeInsets.all(16),
-                      title: Text(location.nom, style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 4),
-                          Text(location.category.toString().split('.').last),
-                          if (userPosition != null)
-                            Text(
-                              'Distance: ${(Geolocator.distanceBetween(
-                                  userPosition!.latitude,
-                                  userPosition!.longitude,
-                                  location.localization.lat!,
-                                  location.localization.lng!
-                              ) / 1000).toStringAsFixed(2)} km',
-                            ),
-                        ],
-                      ),
-                      trailing: Checkbox(
-                        value: isCheck,
-                        onChanged: (val) {
-                          if (val == false) {
-                            Provider.of<LocationManager>(context, listen: false).unlikeLocation(location);
-                          }
-                          setState(() {
-                            plans[location] = val ?? false;
-                          });
-                        },
-                        activeColor: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  );
-                },
-              ),
+                const PopupMenuItem<SortOption>(
+                  value: SortOption.NameZA,
+                  child: Text('Nom Z-A'),
+                ),
+                const PopupMenuItem<SortOption>(
+                  value: SortOption.TypeAZ,
+                  child: Text('Type A-Z'),
+                ),
+                const PopupMenuItem<SortOption>(
+                  value: SortOption.TypeZA,
+                  child: Text('Type Z-A'),
+                ),
+                const PopupMenuItem<SortOption>(
+                  value: SortOption.Proximity,
+                  child: Text('Par proximité'),
+                ),
+              ],
             ),
           ],
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Lieux likés'),
+              Tab(text: 'Favoris'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildLocationList(filteredLocations),
+            _buildLocationList(favoriteLocations),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {
+            List<Location> selectedLocations = plans.entries
+                .where((entry) => entry.value)
+                .map((entry) => entry.key)
+                .toList();
+
+            context.go('/planningpage', extra: selectedLocations);
+          },
+          tooltip: 'Créer un plan',
+          icon: Icon(Icons.map),
+          label: Text('Créer un plan'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          List<Location> selectedLocations = plans.entries
-              .where((entry) => entry.value)
-              .map((entry) => entry.key)
-              .toList();
+    );
+  }
 
-          context.push('/planningpage', extra: selectedLocations);
-        },
-        tooltip: 'Créer un plan',
-        icon: Icon(Icons.map),
-        label: Text('Créer un plan'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+  Widget _buildLocationList(List<Location> locations) {
+    return FadeTransition(
+      opacity: _animation,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                  _sortAndFilterLocations();
+                });
+              },
+              decoration: InputDecoration(
+                labelText: 'Rechercher',
+                suffixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[200],
+              ),
+            ),
+          ),
+          Container(
+            height: 50,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              children: Categories.values.map((category) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(category.toString().split('.').last),
+                    selected: selectedCategories.contains(category),
+                    onSelected: (bool selected) {
+                      setState(() {
+                        if (selected) {
+                          selectedCategories.add(category);
+                        } else {
+                          selectedCategories.remove(category);
+                        }
+                        _sortAndFilterLocations();
+                      });
+                    },
+                    backgroundColor: Colors.grey[200],
+                    selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                    checkmarkColor: Theme.of(context).primaryColor,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                Text(
+                  'Distance maximale : ${maxDistance == double.infinity ? "Illimité" : (maxDistance / 1000).toStringAsFixed(1)} km',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: Theme.of(context).primaryColor,
+                    inactiveTrackColor: Theme.of(context).primaryColor.withOpacity(0.3),
+                    thumbColor: Theme.of(context).primaryColor,
+                    overlayColor: Theme.of(context).primaryColor.withOpacity(0.4),
+                    valueIndicatorColor: Theme.of(context).primaryColor,
+                    valueIndicatorTextStyle: TextStyle(color: Colors.white),
+                  ),
+                  child: Slider(
+                    value: maxDistance == double.infinity ? 100000 : maxDistance,
+                    min: 0,
+                    max: 100000,
+                    divisions: 100,
+                    label: maxDistance == double.infinity ? 'Illimité' : '${(maxDistance / 1000).toStringAsFixed(1)} km',
+                    onChanged: (value) {
+                      setState(() {
+                        maxDistance = value == 100000 ? double.infinity : value;
+                        _sortAndFilterLocations();
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          CheckboxListTile(
+            title: Text('Sélectionner/Désélectionner tout', style: TextStyle(fontWeight: FontWeight.bold)),
+            value: filteredLocations.isNotEmpty && filteredLocations.every((location) => plans[location] == true),
+            onChanged: filteredLocations.isEmpty ? null : _toggleAllLocations,
+            activeColor: Theme.of(context).primaryColor,
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: locations.length,
+              itemBuilder: (context, index) {
+                Location location = locations[index];
+                bool isCheck = plans[location] ?? false;
+                return Card(
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  elevation: 2,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(16),
+                    title: Text(location.nom, style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 4),
+                        Text(location.category.toString().split('.').last),
+                        if (userPosition != null)
+                          Text(
+                            'Distance: ${(Geolocator.distanceBetween(
+                                userPosition!.latitude,
+                                userPosition!.longitude,
+                                location.localization.lat!,
+                                location.localization.lng!
+                            ) / 1000).toStringAsFixed(2)} km',
+                          ),
+                      ],
+                    ),
+                    trailing: Checkbox(
+                      value: isCheck,
+                      onChanged: (val) {
+                        setState(() {
+                          plans[location] = val ?? false;
+                        });
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
