@@ -15,10 +15,14 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
   late LocationManager _locationManager;
   List<Location> _locations = [];
   int _currentIndex = 0;
+  late AnimationController _animationController;
+  late Animation<Offset> _animation;
+  double _dragPercent = 0;
+  Offset _dragStart = Offset.zero;
 
   @override
   void initState() {
@@ -26,10 +30,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _locationManager = Provider.of<LocationManager>(context, listen: false);
     _loadLocations();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = Tween<Offset>(begin: Offset.zero, end: Offset.zero).animate(_animationController);
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -57,18 +67,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void _handleLike() {
-    _locationManager.like();
-    _moveToNextCard();
+    _animateCard(Offset(1, 0)).then((_) {
+      _locationManager.like();
+      _moveToNextCard();
+    });
   }
 
   void _handleDislike() {
-    _locationManager.dislike();
-    _moveToNextCard();
+    _animateCard(Offset(-1, 0)).then((_) {
+      _locationManager.dislike();
+      _moveToNextCard();
+    });
   }
 
   void _handleFavorite() {
-    _locationManager.favorite();
-    _moveToNextCard();
+    _animateCard(Offset(0, -1)).then((_) {
+      _locationManager.favorite();
+      _moveToNextCard();
+    });
+  }
+
+  Future<void> _animateCard(Offset end) async {
+    _animation = Tween<Offset>(
+      begin: Offset.zero,
+      end: end,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    await _animationController.forward(from: 0);
+    _animationController.reset();
   }
 
   void _moveToNextCard() {
@@ -127,80 +155,144 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildLocationCard(Location location) {
-    return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              child: Stack(
-                fit: StackFit.expand,
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _animation.value * MediaQuery.of(context).size.width,
+          child: Transform.rotate(
+            angle: _animation.value.dx * 0.2,
+            child: Opacity(
+              opacity: 1 - _animationController.value.abs(),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: GestureDetector(
+        onPanStart: (details) {
+          _dragStart = details.localPosition;
+        },
+        onPanUpdate: (details) {
+          setState(() {
+            _dragPercent = (details.localPosition.dx - _dragStart.dx) / MediaQuery.of(context).size.width;
+            _animationController.value = _dragPercent;
+          });
+        },
+        onPanEnd: (details) {
+          if (_dragPercent.abs() > 0.5) {
+            if (_dragPercent > 0) {
+              _handleLike();
+            } else {
+              _handleDislike();
+            }
+          } else if (details.velocity.pixelsPerSecond.dy < -1000) {
+            _handleFavorite();
+          } else {
+            _animationController.reverse();
+          }
+          _dragPercent = 0;
+        },
+        child: Stack(
+          children: [
+            Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  location.imageUrl != null
-                      ? Image.network(
-                    location.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
-                      );
-                    },
-                  )
-                      : Container(
-                    color: Colors.grey[300],
-                    child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [Colors.black.withOpacity(0.8), Colors.transparent],
-                        ),
-                      ),
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          Text(
-                            location.nom,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          location.imageUrl != null
+                              ? Image.network(
+                            location.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
+                              );
+                            },
+                          )
+                              : Container(
+                            color: Colors.grey[300],
+                            child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey[600]),
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Catégorie: ${location.category.toString().split('.').last}',
-                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                                ),
+                              ),
+                              padding: EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    location.nom,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Catégorie: ${location.category.toString().split('.').last}',
+                                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      location.description ?? 'Aucune description disponible',
+                      style: TextStyle(fontSize: 16),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              location.description ?? 'Aucune description disponible',
-              style: TextStyle(fontSize: 16),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+            if (_dragPercent != 0)
+              Positioned(
+                top: 20,
+                left: _dragPercent > 0 ? 20 : null,
+                right: _dragPercent < 0 ? 20 : null,
+                child: Transform.rotate(
+                  angle: _dragPercent > 0 ? -0.5 : 0.5,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _dragPercent > 0 ? Colors.green.withOpacity(0.8) : Colors.red.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _dragPercent > 0 ? 'LIKE' : 'NOPE',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -284,23 +376,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Expanded(
                 child: _locations.isEmpty
                     ? Center(child: Text('Aucun lieu disponible'))
-                    : GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    if (details.primaryVelocity! > 0) {
-                      _handleLike();
-                    } else if (details.primaryVelocity! < 0) {
-                      _handleDislike();
-                    }
-                  },
-                  onVerticalDragEnd: (details) {
-                    if (details.primaryVelocity! < 0) {
-                      _handleFavorite();
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: _buildLocationCard(_locations[_currentIndex]),
-                  ),
+                    : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: _buildLocationCard(_locations[_currentIndex]),
                 ),
               ),
               Padding(
