@@ -233,11 +233,11 @@ class LocationManager extends ChangeNotifier {
     if (favoriteLocations.contains(location)) {
       favoriteLocations.remove(location);
       if (!likedLocations.contains(location)) {
-        locations.add(location);
+        likedLocations.add(location);
+        location.isLiked = true;
       }
     } else {
       favoriteLocations.add(location);
-      locations.remove(location);
       likedLocations.remove(location);
     }
     saveState();
@@ -248,7 +248,6 @@ class LocationManager extends ChangeNotifier {
     return likedLocations.where((location) => !favoriteLocations.contains(location)).toList();
   }
 
-  // Add this method to the LocationManager class
   Future<void> resetFavoriteLocations() async {
     locations.addAll(favoriteLocations);
     favoriteLocations.clear();
