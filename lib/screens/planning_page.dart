@@ -22,18 +22,25 @@ class PlanningPage extends StatefulWidget {
 }
 
 class _PlanningPageState extends State<PlanningPage> {
-  late List<Location> favoriteLocations;
+  late List<Location> selectedLikedLocations;
+  late List<Location> selectedFavoriteLocations;
 
   @override
   void initState() {
     super.initState();
-    _loadFavoriteLocations();
+    _separateSelectedLocations();
   }
 
-  void _loadFavoriteLocations() {
+  void _separateSelectedLocations() {
     final locationManager = Provider.of<LocationManager>(context, listen: false);
     setState(() {
-      favoriteLocations = locationManager.favoriteLocations;
+      selectedLikedLocations = widget.selectedLocations
+          .where((location) => locationManager.likedLocations.contains(location) &&
+          !locationManager.favoriteLocations.contains(location))
+          .toList();
+      selectedFavoriteLocations = widget.selectedLocations
+          .where((location) => locationManager.favoriteLocations.contains(location))
+          .toList();
     });
   }
 
@@ -49,15 +56,15 @@ class _PlanningPageState extends State<PlanningPage> {
           foregroundColor: Colors.white,
           bottom: TabBar(
             tabs: [
-              Tab(text: 'Sélectionnés'),
-              Tab(text: 'Favoris'),
+              Tab(text: 'Likés sélectionnés'),
+              Tab(text: 'Favoris sélectionnés'),
             ],
           ),
         ),
         body: TabBarView(
           children: [
-            _buildLocationList(widget.selectedLocations),
-            _buildLocationList(favoriteLocations),
+            _buildLocationList(selectedLikedLocations),
+            _buildLocationList(selectedFavoriteLocations),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -68,7 +75,7 @@ class _PlanningPageState extends State<PlanningPage> {
                 MaterialPageRoute(
                   builder: (context) => MapScreen(
                     userPosition: LatLng(userPosition.latitude, userPosition.longitude),
-                    locations: [...widget.selectedLocations, ...favoriteLocations],
+                    locations: [...selectedLikedLocations, ...selectedFavoriteLocations],
                   ),
                 ),
               );
@@ -101,7 +108,9 @@ class _PlanningPageState extends State<PlanningPage> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
+          child: locations.isEmpty
+              ? Center(child: Text('Aucun lieu sélectionné dans cette catégorie'))
+              : ListView.builder(
             itemCount: locations.length,
             itemBuilder: (context, index) {
               final location = locations[index];
