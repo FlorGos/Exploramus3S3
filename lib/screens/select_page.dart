@@ -261,6 +261,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         ),
       );
     }
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -309,8 +310,8 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         ),
         body: TabBarView(
           children: [
-            _buildLocationList(filteredLocations),
-            _buildLocationList(favoriteLocations),
+            _buildLocationList(locationManager.getLikedButNotFavoriteLocations()),
+            _buildLocationList(locationManager.favoriteLocations),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -432,6 +433,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
               itemBuilder: (context, index) {
                 Location location = locations[index];
                 bool isCheck = plans[location] ?? false;
+                bool isFavorite = favoriteLocations.contains(location);
                 return Card(
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   elevation: 2,
@@ -454,14 +456,28 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                           ),
                       ],
                     ),
-                    trailing: Checkbox(
-                      value: isCheck,
-                      onChanged: (val) {
-                        setState(() {
-                          plans[location] = val ?? false;
-                        });
-                      },
-                      activeColor: Theme.of(context).primaryColor,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(isFavorite ? Icons.star : Icons.star_border),
+                          onPressed: () {
+                            final locationManager = Provider.of<LocationManager>(context, listen: false);
+                            locationManager.toggleFavorite(location);
+                            setState(() {});
+                          },
+                        ),
+                        if (!isFavorite)
+                          Checkbox(
+                            value: isCheck,
+                            onChanged: (val) {
+                              setState(() {
+                                plans[location] = val ?? false;
+                              });
+                            },
+                            activeColor: Theme.of(context).primaryColor,
+                          ),
+                      ],
                     ),
                   ),
                 );

@@ -65,14 +65,15 @@ class LocationManager extends ChangeNotifier {
   void favorite() {
     Location? currentLocation = getCurrentVisibleLocation();
     if (currentLocation != null) {
-      currentLocation.isLiked = true;
-      favoriteLocations.add(currentLocation);
-      likedLocations.add(currentLocation);
-      locations.remove(currentLocation);
-      _history.add(currentLocation);
-      _moveToNextLocation();
-      saveState();
-      notifyListeners();
+      if (!favoriteLocations.contains(currentLocation)) {
+        favoriteLocations.add(currentLocation);
+        locations.remove(currentLocation);
+        likedLocations.remove(currentLocation);
+        _history.add(currentLocation);
+        _moveToNextLocation();
+        saveState();
+        notifyListeners();
+      }
     }
   }
 
@@ -183,8 +184,7 @@ class LocationManager extends ChangeNotifier {
     return locations.where((location) =>
     !likedLocations.contains(location) &&
         !dislikedLocations.contains(location) &&
-        !favoriteLocations.contains(location)
-    ).toList();
+        !favoriteLocations.contains(location)).toList();
   }
 
   void unlikeLocation(Location location) {
@@ -198,6 +198,15 @@ class LocationManager extends ChangeNotifier {
   void removeFromDisliked(Location location) {
     dislikedLocations.remove(location);
     locations.add(location);
+    saveState();
+    notifyListeners();
+  }
+
+  void removeFromFavorites(Location location) {
+    favoriteLocations.remove(location);
+    if (!likedLocations.contains(location)) {
+      locations.add(location);
+    }
     saveState();
     notifyListeners();
   }
@@ -219,5 +228,23 @@ class LocationManager extends ChangeNotifier {
     }
     return visibleLocations.first;
   }
-}
 
+  void toggleFavorite(Location location) {
+    if (favoriteLocations.contains(location)) {
+      favoriteLocations.remove(location);
+      if (!likedLocations.contains(location)) {
+        locations.add(location);
+      }
+    } else {
+      favoriteLocations.add(location);
+      locations.remove(location);
+      likedLocations.remove(location);
+    }
+    saveState();
+    notifyListeners();
+  }
+
+  List<Location> getLikedButNotFavoriteLocations() {
+    return likedLocations.where((location) => !favoriteLocations.contains(location)).toList();
+  }
+}
