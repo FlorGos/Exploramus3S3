@@ -247,4 +247,14 @@ class LocationManager extends ChangeNotifier {
   List<Location> getLikedButNotFavoriteLocations() {
     return likedLocations.where((location) => !favoriteLocations.contains(location)).toList();
   }
+
+  // Add this method to the LocationManager class
+  Future<void> resetFavoriteLocations() async {
+    locations.addAll(favoriteLocations);
+    favoriteLocations.clear();
+    _moveToNextLocation();
+    await saveState();
+    notifyListeners();
+  }
 }
+

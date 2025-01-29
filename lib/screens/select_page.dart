@@ -24,13 +24,17 @@ class SelectPage extends StatefulWidget {
 class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateMixin {
   bool _permissionsChecked = false;
   Map<Location, bool> plans = {};
-  List<Location> filteredLocations = [];
-  List<Location> favoriteLocations = [];
-  String searchQuery = '';
-  SortOption currentSortOption = SortOption.NameAZ;
-  Set<Categories> selectedCategories = Set<Categories>();
+  List<Location> filteredLikedLocations = [];
+  List<Location> filteredFavoriteLocations = [];
+  String searchQueryLiked = '';
+  String searchQueryFavorite = '';
+  SortOption currentSortOptionLiked = SortOption.NameAZ;
+  SortOption currentSortOptionFavorite = SortOption.NameAZ;
+  Set<Categories> selectedCategoriesLiked = Set<Categories>();
+  Set<Categories> selectedCategoriesFavorite = Set<Categories>();
   Position? userPosition;
-  double maxDistance = double.infinity;
+  double maxDistanceLiked = double.infinity;
+  double maxDistanceFavorite = double.infinity;
   late AnimationController _animationController;
   late Animation<double> _animation;
 
@@ -164,8 +168,6 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         key: (location) => location,
         value: (location) => true,
       );
-      filteredLocations = locationManager.likedLocations;
-      favoriteLocations = locationManager.favoriteLocations;
       _sortAndFilterLocations();
     });
   }
@@ -183,25 +185,47 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
   }
 
   void _sortAndFilterLocations() {
-    filteredLocations = plans.keys.where((location) {
-      bool matchesSearch = location.nom.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          location.category.toString().toLowerCase().contains(searchQuery.toLowerCase());
-      bool matchesCategory = selectedCategories.isEmpty || selectedCategories.contains(location.category);
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
 
-      bool matchesProximity = true;
-      if (userPosition != null && maxDistance != double.infinity) {
-        double distance = Geolocator.distanceBetween(
-            userPosition!.latitude, userPosition!.longitude,
-            location.localization.lat!, location.localization.lng!
-        );
-        matchesProximity = distance <= maxDistance;
-      }
-
+    // Filter and sort liked locations
+    filteredLikedLocations = locationManager.getLikedButNotFavoriteLocations().where((location) {
+      bool matchesSearch = location.nom.toLowerCase().contains(searchQueryLiked.toLowerCase()) ||
+          location.category.toString().toLowerCase().contains(searchQueryLiked.toLowerCase());
+      bool matchesCategory = selectedCategoriesLiked.isEmpty || selectedCategoriesLiked.contains(location.category);
+      bool matchesProximity = _checkProximity(location, maxDistanceLiked);
       return matchesSearch && matchesCategory && matchesProximity;
     }).toList();
 
-    filteredLocations.sort((a, b) {
-      switch (currentSortOption) {
+    _sortLocations(filteredLikedLocations, currentSortOptionLiked);
+
+    // Filter and sort favorite locations
+    filteredFavoriteLocations = locationManager.favoriteLocations.where((location) {
+      bool matchesSearch = location.nom.toLowerCase().contains(searchQueryFavorite.toLowerCase()) ||
+          location.category.toString().toLowerCase().contains(searchQueryFavorite.toLowerCase());
+      bool matchesCategory = selectedCategoriesFavorite.isEmpty || selectedCategoriesFavorite.contains(location.category);
+      bool matchesProximity = _checkProximity(location, maxDistanceFavorite);
+      return matchesSearch && matchesCategory && matchesProximity;
+    }).toList();
+
+    _sortLocations(filteredFavoriteLocations, currentSortOptionFavorite);
+
+    setState(() {});
+  }
+
+  bool _checkProximity(Location location, double maxDistance) {
+    if (userPosition != null && maxDistance != double.infinity) {
+      double distance = Geolocator.distanceBetween(
+          userPosition!.latitude, userPosition!.longitude,
+          location.localization.lat!, location.localization.lng!
+      );
+      return distance <= maxDistance;
+    }
+    return true;
+  }
+
+  void _sortLocations(List<Location> locations, SortOption sortOption) {
+    locations.sort((a, b) {
+      switch (sortOption) {
         case SortOption.NameAZ:
           return a.nom.compareTo(b.nom);
         case SortOption.NameZA:
@@ -225,14 +249,13 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
           return 0;
       }
     });
-
-    setState(() {});
   }
 
-  void _toggleAllLocations(bool? value) {
+  void _toggleAllLocations(bool? value, bool isLikedTab) {
     setState(() {
-      for (var key in filteredLocations) {
-        plans[key] = value ?? false;
+      List<Location> locationsToToggle = isLikedTab ? filteredLikedLocations : filteredFavoriteLocations;
+      for (var location in locationsToToggle) {
+        plans[location] = value ?? false;
       }
     });
   }
@@ -261,7 +284,6 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         ),
       );
     }
-    final locationManager = Provider.of<LocationManager>(context, listen: false);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -269,36 +291,45 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
           title: Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold)),
           actions: [
-            PopupMenuButton<SortOption>(
-              icon: Icon(Icons.sort),
-              onSelected: (SortOption value) {
-                setState(() {
-                  currentSortOption = value;
-                  _sortAndFilterLocations();
-                });
+            Builder(
+              builder: (context) {
+                final tabController = DefaultTabController.of(context);
+                return PopupMenuButton<SortOption>(
+                  icon: Icon(Icons.sort),
+                  onSelected: (SortOption value) {
+                    setState(() {
+                      if (tabController?.index == 0) {
+                        currentSortOptionLiked = value;
+                      } else {
+                        currentSortOptionFavorite = value;
+                      }
+                      _sortAndFilterLocations();
+                    });
+                  },
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+                    const PopupMenuItem<SortOption>(
+                      value: SortOption.NameAZ,
+                      child: Text('Nom A-Z'),
+                    ),
+                    const PopupMenuItem<SortOption>(
+                      value: SortOption.NameZA,
+                      child: Text('Nom Z-A'),
+                    ),
+                    const PopupMenuItem<SortOption>(
+                      value: SortOption.TypeAZ,
+                      child: Text('Type A-Z'),
+                    ),
+                    const PopupMenuItem<SortOption>(
+                      value: SortOption.TypeZA,
+                      child: Text('Type Z-A'),
+                    ),
+                    const PopupMenuItem<SortOption>(
+                      value: SortOption.Proximity,
+                      child: Text('Par proximité'),
+                    ),
+                  ],
+                );
               },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
-                const PopupMenuItem<SortOption>(
-                  value: SortOption.NameAZ,
-                  child: Text('Nom A-Z'),
-                ),
-                const PopupMenuItem<SortOption>(
-                  value: SortOption.NameZA,
-                  child: Text('Nom Z-A'),
-                ),
-                const PopupMenuItem<SortOption>(
-                  value: SortOption.TypeAZ,
-                  child: Text('Type A-Z'),
-                ),
-                const PopupMenuItem<SortOption>(
-                  value: SortOption.TypeZA,
-                  child: Text('Type Z-A'),
-                ),
-                const PopupMenuItem<SortOption>(
-                  value: SortOption.Proximity,
-                  child: Text('Par proximité'),
-                ),
-              ],
             ),
           ],
           bottom: TabBar(
@@ -310,8 +341,8 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
         ),
         body: TabBarView(
           children: [
-            _buildLocationList(locationManager.getLikedButNotFavoriteLocations()),
-            _buildLocationList(locationManager.favoriteLocations),
+            _buildLocationList(filteredLikedLocations, true),
+            _buildLocationList(filteredFavoriteLocations, false),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -333,7 +364,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildLocationList(List<Location> locations) {
+  Widget _buildLocationList(List<Location> locations, bool isLikedTab) {
     return FadeTransition(
       opacity: _animation,
       child: Column(
@@ -343,7 +374,11 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
             child: TextField(
               onChanged: (value) {
                 setState(() {
-                  searchQuery = value;
+                  if (isLikedTab) {
+                    searchQueryLiked = value;
+                  } else {
+                    searchQueryFavorite = value;
+                  }
                   _sortAndFilterLocations();
                 });
               },
@@ -368,13 +403,23 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     label: Text(category.toString().split('.').last),
-                    selected: selectedCategories.contains(category),
+                    selected: isLikedTab
+                        ? selectedCategoriesLiked.contains(category)
+                        : selectedCategoriesFavorite.contains(category),
                     onSelected: (bool selected) {
                       setState(() {
-                        if (selected) {
-                          selectedCategories.add(category);
+                        if (isLikedTab) {
+                          if (selected) {
+                            selectedCategoriesLiked.add(category);
+                          } else {
+                            selectedCategoriesLiked.remove(category);
+                          }
                         } else {
-                          selectedCategories.remove(category);
+                          if (selected) {
+                            selectedCategoriesFavorite.add(category);
+                          } else {
+                            selectedCategoriesFavorite.remove(category);
+                          }
                         }
                         _sortAndFilterLocations();
                       });
@@ -392,7 +437,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
             child: Column(
               children: [
                 Text(
-                  'Distance maximale : ${maxDistance == double.infinity ? "Illimité" : (maxDistance / 1000).toStringAsFixed(1)} km',
+                  'Distance maximale : ${isLikedTab ? (maxDistanceLiked == double.infinity ? "Illimité" : "${(maxDistanceLiked / 1000).toStringAsFixed(1)} km") : (maxDistanceFavorite == double.infinity ? "Illimité" : "${(maxDistanceFavorite / 1000).toStringAsFixed(1)} km")}',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 SliderTheme(
@@ -405,14 +450,22 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                     valueIndicatorTextStyle: TextStyle(color: Colors.white),
                   ),
                   child: Slider(
-                    value: maxDistance == double.infinity ? 100000 : maxDistance,
+                    value: isLikedTab
+                        ? (maxDistanceLiked == double.infinity ? 100000 : maxDistanceLiked)
+                        : (maxDistanceFavorite == double.infinity ? 100000 : maxDistanceFavorite),
                     min: 0,
                     max: 100000,
                     divisions: 100,
-                    label: maxDistance == double.infinity ? 'Illimité' : '${(maxDistance / 1000).toStringAsFixed(1)} km',
+                    label: isLikedTab
+                        ? (maxDistanceLiked == double.infinity ? 'Illimité' : '${(maxDistanceLiked / 1000).toStringAsFixed(1)} km')
+                        : (maxDistanceFavorite == double.infinity ? 'Illimité' : '${(maxDistanceFavorite / 1000).toStringAsFixed(1)} km'),
                     onChanged: (value) {
                       setState(() {
-                        maxDistance = value == 100000 ? double.infinity : value;
+                        if (isLikedTab) {
+                          maxDistanceLiked = value == 100000 ? double.infinity : value;
+                        } else {
+                          maxDistanceFavorite = value == 100000 ? double.infinity : value;
+                        }
                         _sortAndFilterLocations();
                       });
                     },
@@ -423,8 +476,8 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
           ),
           CheckboxListTile(
             title: Text('Sélectionner/Désélectionner tout', style: TextStyle(fontWeight: FontWeight.bold)),
-            value: filteredLocations.isNotEmpty && filteredLocations.every((location) => plans[location] == true),
-            onChanged: filteredLocations.isEmpty ? null : _toggleAllLocations,
+            value: locations.isNotEmpty && locations.every((location) => plans[location] == true),
+            onChanged: locations.isEmpty ? null : (value) => _toggleAllLocations(value, isLikedTab),
             activeColor: Theme.of(context).primaryColor,
           ),
           Expanded(
@@ -433,7 +486,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
               itemBuilder: (context, index) {
                 Location location = locations[index];
                 bool isCheck = plans[location] ?? false;
-                bool isFavorite = favoriteLocations.contains(location);
+                bool isFavorite = Provider.of<LocationManager>(context, listen: false).favoriteLocations.contains(location);
                 return Card(
                   margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   elevation: 2,
@@ -464,10 +517,10 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                           onPressed: () {
                             final locationManager = Provider.of<LocationManager>(context, listen: false);
                             locationManager.toggleFavorite(location);
-                            setState(() {});
+                            _sortAndFilterLocations();
                           },
                         ),
-                        if (!isFavorite)
+                        if (!isFavorite || !isLikedTab)
                           Checkbox(
                             value: isCheck,
                             onChanged: (val) {
