@@ -8,6 +8,9 @@ import 'package:swipezone/repositories/models/localization.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:swipezone/screens/widgets/transparent_bottom_bar.dart';
 import 'package:swipezone/screens/widgets/location_detail_modal.dart';
+import 'package:provider/provider.dart';
+import 'package:swipezone/domains/location_manager.dart';
+import 'package:swipezone/screens/widgets/legend_widget.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -299,6 +302,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
+  Color _getMarkerColor(Location location) {
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
+    if (locationManager.favoriteLocations.contains(location)) {
+      return Colors.yellow;  // Color for favorite locations
+    } else if (locationManager.likedLocations.contains(location)) {
+      return Colors.red;  // Color for liked locations
+    }
+    return Theme.of(context).primaryColor;  // Default color
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -356,7 +369,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                           duration: Duration(milliseconds: 300),
                           child: Icon(
                             Icons.location_on,
-                            color: _movingLocation == location ? Colors.green : Theme.of(context).primaryColor,
+                            color: _movingLocation == location ? Colors.green : _getMarkerColor(location),
                             size: _movingLocation == location ? 50.0 : 40.0,
                           ),
                         ),
@@ -385,19 +398,31 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           SizeTransition(
             sizeFactor: _animation,
             axisAlignment: -1,
-            child: TransparentBottomBar(
-              transportModes: [
-                TransportMode(name: 'Walking', icon: Icons.directions_walk, speedKmPerHour: 5),
-                TransportMode(name: 'Cycling', icon: Icons.directions_bike, speedKmPerHour: 15),
-                TransportMode(name: 'Driving', icon: Icons.directions_car, speedKmPerHour: 50),
-                TransportMode(name: 'Transit', icon: Icons.directions_bus, speedKmPerHour: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(bottom: 8, right: 16),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: LegendWidget(),
+                  ),
+                ),
+                TransparentBottomBar(
+                  transportModes: [
+                    TransportMode(name: 'Walking', icon: Icons.directions_walk, speedKmPerHour: 5),
+                    TransportMode(name: 'Cycling', icon: Icons.directions_bike, speedKmPerHour: 15),
+                    TransportMode(name: 'Driving', icon: Icons.directions_car, speedKmPerHour: 50),
+                    TransportMode(name: 'Transit', icon: Icons.directions_bus, speedKmPerHour: 30),
+                  ],
+                  selectedMode: _selectedMode,
+                  onListPressed: _showLocationsList,
+                  onAddPressed: _addNewMarker,
+                  totalDistance: _getTotalDistance(),
+                  onTransportModeSelected: _onTransportModeSelected,
+                  onResetPressed: _resetMarkers,
+                ),
               ],
-              selectedMode: _selectedMode,
-              onListPressed: _showLocationsList,
-              onAddPressed: _addNewMarker,
-              totalDistance: _getTotalDistance(),
-              onTransportModeSelected: _onTransportModeSelected,
-              onResetPressed: _resetMarkers,
             ),
           ),
         ],
