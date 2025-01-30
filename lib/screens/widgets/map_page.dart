@@ -84,7 +84,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _toggleVisibility() {
     setState(() {
       _isBarVisible = !_isBarVisible;
-      _showNavigationInstructions = _isBarVisible;
       if (_isBarVisible) {
         _controller.forward();
       } else {
@@ -558,12 +557,24 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ],
           ),
           Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              child: Icon(_isBarVisible ? Icons.visibility_off : Icons.visibility),
-              onPressed: _toggleVisibility,
-              backgroundColor: Theme.of(context).primaryColor,
+            top: 16,  // Distance from the top of the map
+            right: 16,  // Distance from the right edge of the map
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: FloatingActionButton(
+                heroTag: "toggleVisibility",
+                child: Icon(
+                  _isBarVisible ? Icons.visibility_off : Icons.visibility,
+                  size: 20, // Reduced icon size
+                ),
+                onPressed: _toggleVisibility,
+                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                elevation: 4, // Add some elevation for better visibility
+                mini: true, // Use a smaller FAB size
+              ),
             ),
           ),
           if (_isLoadingRoute)

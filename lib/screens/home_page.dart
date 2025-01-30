@@ -111,12 +111,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
 
   void _handleUndo() {
     setState(() {
-      if (_currentIndex > 0) {
-        _currentIndex--;
-      }
       Location? lastLocation = _locationManager.undo();
       if (lastLocation != null) {
         _locations.insert(0, lastLocation);
+        if (_currentIndex > 0) {
+          _currentIndex--;
+        }
       }
     });
   }

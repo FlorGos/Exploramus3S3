@@ -84,8 +84,9 @@ class LocationManager extends ChangeNotifier {
         lastLocation.isLiked = false;
       } else if (dislikedLocations.remove(lastLocation)) {
         // Do nothing, just remove from disliked
+      } else if (favoriteLocations.remove(lastLocation)) {
+        // Remove from favorites
       }
-      favoriteLocations.remove(lastLocation);
       locations.insert(0, lastLocation);
       currentLocationId = lastLocation.nom;
       saveState();
