@@ -11,6 +11,11 @@ import 'package:swipezone/screens/widgets/location_detail_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:swipezone/domains/location_manager.dart';
 import 'package:swipezone/screens/widgets/legend_widget.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:swipezone/repositories/models/navigation_step.dart';
+import 'package:swipezone/screens/widgets/navigation_instructions.dart';
+import 'package:swipezone/screens/widgets/transit_info_panel.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -28,7 +33,6 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _isBarVisible = true;
-  List<LatLng> _polylinePoints = [];
   bool _isAddingMarker = false;
   TransportMode? _selectedMode;
   bool _isLoadingRoute = false;
@@ -36,12 +40,24 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
   late List<Location> _initialLocations;
+  Map<String, List<LatLng>> _routePoints = {};
+  String _currentProfile = '';
+  List<NavigationStep> _navigationSteps = [];
+  double _totalDistance = 0;
+  int _totalDuration = 0;
+  String _currentStreet = '';
+  bool _showNavigationInstructions = false;
+  List<LatLng> _osrmRoutePoints = [];
+  bool _showTransitInfo = false;
+  List<TransitRoute> _transitRoutes = [];
+  List<LatLng> _basicPolylinePoints = [];
+  bool _isOSRMRouteVisible = false;
 
   @override
   void initState() {
     super.initState();
     _initialLocations = widget.locations.map((loc) => loc.clone()).toList();
-    _updatePolylinePoints();
+    _updateBasicPolylinePoints();
     _controller = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -59,9 +75,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _toggleBarVisibility() {
+  void _toggleVisibility() {
     setState(() {
       _isBarVisible = !_isBarVisible;
+      _showNavigationInstructions = _isBarVisible;
       if (_isBarVisible) {
         _controller.forward();
       } else {
@@ -70,21 +87,175 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _updatePolylinePoints() {
-    _polylinePoints = _calculateSimulatedRoute(_selectedMode);
-    setState(() {});
+  void _updateBasicPolylinePoints() {
+    final sortedLocations = _sortLocationsByDistance();
+    _basicPolylinePoints = [widget.userPosition, ...sortedLocations.map((loc) => LatLng(loc.localization.lat!, loc.localization.lng!))];
   }
 
-  void _addNewMarker() {
+  Future<void> _fetchOSRMRoute(String profile) async {
     setState(() {
-      _isAddingMarker = true;
+      _isLoadingRoute = true;
+    });
+
+    final sortedLocations = _sortLocationsByDistance();
+    final List<LatLng> waypoints = [widget.userPosition, ...sortedLocations.map((loc) => LatLng(loc.localization.lat!, loc.localization.lng!))];
+
+    String coordinates = waypoints.map((point) => '${point.longitude},${point.latitude}').join(';');
+    final url = Uri.parse('http://router.project-osrm.org/route/v1/$profile/$coordinates?overview=full&geometries=geojson&steps=true&annotations=true');
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> coordinates = data['routes'][0]['geometry']['coordinates'];
+        _osrmRoutePoints = coordinates.map((coord) => LatLng(coord[1], coord[0])).toList();
+
+        final route = data['routes'][0];
+        _totalDistance = route['distance'].toDouble();
+        _totalDuration = route['duration'].toInt();
+
+        final List<NavigationStep> steps = [];
+        for (final leg in route['legs']) {
+          for (final step in leg['steps']) {
+            steps.add(NavigationStep.fromJson(step));
+          }
+        }
+        _navigationSteps = steps;
+
+        if (steps.isNotEmpty) {
+          _currentStreet = steps[0].instruction;
+        }
+
+        setState(() {
+          _showNavigationInstructions = true;
+          _isOSRMRouteVisible = true;
+        });
+      } else {
+        print('Failed to fetch OSRM route: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching OSRM route: $e');
+    }
+
+    setState(() {
+      _isLoadingRoute = false;
+    });
+  }
+
+  void _onTransportModeSelected(TransportMode mode) async {
+    if (_selectedMode == mode && _isOSRMRouteVisible) {
+      setState(() {
+        _isOSRMRouteVisible = false;
+        _showNavigationInstructions = false;
+        _showTransitInfo = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _selectedMode = mode;
+    });
+
+    String profile;
+    switch (mode.name) {
+      case 'Walking':
+        profile = 'foot';
+        _showTransitInfo = false;
+        await _fetchOSRMRoute(profile);
+        break;
+      case 'Cycling':
+        profile = 'bike';
+        _showTransitInfo = false;
+        await _fetchOSRMRoute(profile);
+        break;
+      case 'Driving':
+        profile = 'car';
+        _showTransitInfo = false;
+        await _fetchOSRMRoute(profile);
+        break;
+      case 'Transit':
+      case 'Metro':
+        setState(() {
+          _isOSRMRouteVisible = false;
+          _showNavigationInstructions = false;
+          _showTransitInfo = true;
+          _transitRoutes = [
+            TransitRoute(
+              type: 'metro',
+              line: '4',
+              direction: 'Porte de Clignancourt',
+              startStation: 'Montparnasse',
+              endStation: 'Châtelet',
+              duration: 15,
+            ),
+            TransitRoute(
+              type: 'bus',
+              line: '96',
+              direction: 'Porte des Lilas',
+              startStation: 'Châtelet',
+              endStation: 'République',
+              duration: 20,
+            ),
+          ];
+        });
+        break;
+      default:
+        _showTransitInfo = false;
+        _isOSRMRouteVisible = false;
+        _showNavigationInstructions = false;
+    }
+  }
+
+  List<Location> _sortLocationsByDistance() {
+    final sortedLocations = List<Location>.from(widget.locations);
+    sortedLocations.sort((a, b) {
+      final distA = _calculateDistance(widget.userPosition, LatLng(a.localization.lat!, a.localization.lng!));
+      final distB = _calculateDistance(widget.userPosition, LatLng(b.localization.lat!, b.localization.lng!));
+      return distA.compareTo(distB);
+    });
+    return sortedLocations;
+  }
+
+  double _calculateDistance(LatLng start, LatLng end) {
+    const R = 6371e3;
+    final phi1 = start.latitude * pi / 180;
+    final phi2 = end.latitude * pi / 180;
+    final deltaPhi = (end.latitude - start.latitude) * pi / 180;
+    final deltaLambda = (end.longitude - start.longitude) * pi / 180;
+
+    final a = sin(deltaPhi / 2) * sin(deltaPhi / 2) +
+        cos(phi1) * cos(phi2) * sin(deltaLambda / 2) * sin(deltaLambda / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return R * c;
+  }
+
+  double _getTotalDistance() {
+    return _totalDistance;
+  }
+
+  void _resetMarkers() {
+    setState(() {
+      for (int i = 0; i < widget.locations.length; i++) {
+        widget.locations[i].localization.lat = _initialLocations[i].localization.lat;
+        widget.locations[i].localization.lng = _initialLocations[i].localization.lng;
+      }
+      _movingLocation = null;
+      _updateBasicPolylinePoints();
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tap on the map to add a new marker'),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
+      SnackBar(content: Text('Marqueurs réinitialisés à leur position initiale'), backgroundColor: Theme.of(context).primaryColor),
     );
+  }
+
+  Color _getMarkerColor(Location location) {
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
+    if (locationManager.favoriteLocations.contains(location)) {
+      return Colors.yellow;
+    } else if (locationManager.likedLocations.contains(location)) {
+      return Colors.red;
+    }
+    return Theme.of(context).primaryColor;
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng point) {
@@ -131,7 +302,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   widget.locations.add(newLocation);
                   _isAddingMarker = false;
                 });
-                _updatePolylinePoints();
+                _updateBasicPolylinePoints();
               },
             ),
           ],
@@ -146,8 +317,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       location.localization.lng = newPosition.longitude;
       _movingLocation = null;
     });
-    _updatePolylinePoints();
     _updateLocationAddress(location);
+    _updateBasicPolylinePoints();
   }
 
   Future<void> _updateLocationAddress(Location location) async {
@@ -233,83 +404,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 setState(() {
                   widget.locations.remove(location);
                 });
-                _updatePolylinePoints();
                 Navigator.of(context).pop();
                 _showLocationsList();
+                _updateBasicPolylinePoints();
               },
             ),
           ],
         );
       },
     );
-  }
-
-  List<LatLng> _calculateSimulatedRoute(TransportMode? mode) {
-    final sortedLocations = _sortLocationsByDistance();
-    final points = <LatLng>[widget.userPosition];
-
-    for (final location in sortedLocations) {
-      final end = LatLng(location.localization.lat!, location.localization.lng!);
-      points.add(end);
-    }
-
-    return points;
-  }
-
-  List<Location> _sortLocationsByDistance() {
-    final sortedLocations = List<Location>.from(widget.locations);
-    sortedLocations.sort((a, b) {
-      final distA = _calculateDistance(widget.userPosition, LatLng(a.localization.lat!, a.localization.lng!));
-      final distB = _calculateDistance(widget.userPosition, LatLng(b.localization.lat!, b.localization.lng!));
-      return distA.compareTo(distB);
-    });
-    return sortedLocations;
-  }
-
-  double _calculateDistance(LatLng start, LatLng end) {
-    const R = 6371e3;
-    final phi1 = start.latitude * pi / 180;
-    final phi2 = end.latitude * pi / 180;
-    final deltaPhi = (end.latitude - start.latitude) * pi / 180;
-    final deltaLambda = (end.longitude - start.longitude) * pi / 180;
-
-    final a = sin(deltaPhi / 2) * sin(deltaPhi / 2) +
-        cos(phi1) * cos(phi2) * sin(deltaLambda / 2) * sin(deltaLambda / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return R * c;
-  }
-
-  double _getTotalDistance() {
-    double totalDistance = 0;
-    for (int i = 0; i < _polylinePoints.length - 1; i++) {
-      totalDistance += _calculateDistance(_polylinePoints[i], _polylinePoints[i + 1]);
-    }
-    return totalDistance;
-  }
-
-  void _resetMarkers() {
-    setState(() {
-      for (int i = 0; i < widget.locations.length; i++) {
-        widget.locations[i].localization.lat = _initialLocations[i].localization.lat;
-        widget.locations[i].localization.lng = _initialLocations[i].localization.lng;
-      }
-      _movingLocation = null;
-      _updatePolylinePoints();
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Marqueurs réinitialisés à leur position initiale'), backgroundColor: Theme.of(context).primaryColor),
-    );
-  }
-
-  Color _getMarkerColor(Location location) {
-    final locationManager = Provider.of<LocationManager>(context, listen: false);
-    if (locationManager.favoriteLocations.contains(location)) {
-      return Colors.yellow;  // Color for favorite locations
-    } else if (locationManager.likedLocations.contains(location)) {
-      return Colors.red;  // Color for liked locations
-    }
-    return Theme.of(context).primaryColor;  // Default color
   }
 
   @override
@@ -334,11 +437,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
               PolylineLayer(
                 polylines: [
-                  Polyline(
-                    points: _polylinePoints,
-                    color: Theme.of(context).primaryColor,
-                    strokeWidth: 4.0,
-                  ),
+                  if (_isOSRMRouteVisible)
+                    Polyline(
+                      points: _osrmRoutePoints,
+                      color: _getRouteColor(_currentProfile),
+                      strokeWidth: 4.0,
+                    )
+                  else
+                    Polyline(
+                      points: _basicPolylinePoints,
+                      color: Theme.of(context).primaryColor,
+                      strokeWidth: 4.0,
+                    ),
                 ],
               ),
               MarkerLayer(
@@ -385,7 +495,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             right: 16,
             child: FloatingActionButton(
               child: Icon(_isBarVisible ? Icons.visibility_off : Icons.visibility),
-              onPressed: _toggleBarVisibility,
+              onPressed: _toggleVisibility,
               backgroundColor: Theme.of(context).primaryColor,
             ),
           ),
@@ -414,6 +524,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     TransportMode(name: 'Cycling', icon: Icons.directions_bike, speedKmPerHour: 15),
                     TransportMode(name: 'Driving', icon: Icons.directions_car, speedKmPerHour: 50),
                     TransportMode(name: 'Transit', icon: Icons.directions_bus, speedKmPerHour: 30),
+                    TransportMode(name: 'Metro', icon: Icons.subway, speedKmPerHour: 40),
                   ],
                   selectedMode: _selectedMode,
                   onListPressed: _showLocationsList,
@@ -425,9 +536,52 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
+          if (_showNavigationInstructions && _isBarVisible)
+            Positioned(
+              top: 0,
+              right: 0,
+              width: 300,
+              bottom: 100,
+              child: Card(
+                margin: EdgeInsets.all(8),
+                child: NavigationInstructions(
+                  steps: _navigationSteps,
+                  totalDistance: _totalDistance,
+                  totalDuration: _totalDuration,
+                  streetName: _currentStreet,
+                  onClose: () => setState(() => _showNavigationInstructions = false),
+                ),
+              ),
+            ),
+          if (_showTransitInfo && _isBarVisible)
+            Positioned(
+              top: 0,
+              right: 0,
+              width: 300,
+              bottom: 100,
+              child: TransitInfoPanel(
+                routes: _transitRoutes,
+                onClose: () => setState(() => _showTransitInfo = false),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Color _getRouteColor(String profile) {
+    switch (profile) {
+      case 'foot':
+        return Colors.green[600]!;
+      case 'bike':
+        return Colors.orange[600]!;
+      case 'car':
+        return Colors.blue[600]!;
+      case 'transit':
+        return Colors.purple[600]!;
+      default:
+        return Theme.of(context).primaryColor;
+    }
   }
 
   void _showLocationDetailModal(Location location) {
@@ -461,16 +615,17 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _onTransportModeSelected(TransportMode mode) async {
+  void _addNewMarker() {
     setState(() {
-      _selectedMode = mode;
-      _isLoadingRoute = true;
+      _isAddingMarker = true;
     });
-    final newPoints = await Future.sync(() => _calculateSimulatedRoute(mode));
-    setState(() {
-      _polylinePoints = newPoints;
-      _isLoadingRoute = false;
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Tap on the map to add a new marker'),
+        duration: Duration(seconds: 2),
+        backgroundColor: Theme.of(context).primaryColor,
+      ),
+    );
   }
 }
 
