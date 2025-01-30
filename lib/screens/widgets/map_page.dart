@@ -16,6 +16,8 @@ import 'package:http/http.dart' as http;
 import 'package:swipezone/repositories/models/navigation_step.dart';
 import 'package:swipezone/screens/widgets/navigation_instructions.dart';
 import 'package:swipezone/screens/widgets/transit_info_panel.dart';
+import 'package:swipezone/screens/widgets/add_marker_dialog.dart';
+import 'package:swipezone/services/geocoding_service.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -415,6 +417,36 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _showAddMarkerDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AddMarkerDialog(
+          onMapSelection: (LatLng point) {
+            setState(() {
+              _isAddingMarker = true;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Tapez sur la carte pour ajouter un marqueur'),
+                duration: Duration(seconds: 2),
+                backgroundColor: Theme.of(context).primaryColor,
+              ),
+            );
+          },
+          onAddressSelection: (GeocodingResult result) {
+            _addNewMarkerAtPosition(LatLng(result.lat, result.lon));
+          },
+        );
+      },
+    );
+  }
+
+  void _addNewMarker() {
+    _showAddMarkerDialog();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -615,7 +647,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _addNewMarker() {
+ /* void _addNewMarker() {
     setState(() {
       _isAddingMarker = true;
     });
@@ -626,6 +658,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         backgroundColor: Theme.of(context).primaryColor,
       ),
     );
-  }
+  }*/
 }
 
