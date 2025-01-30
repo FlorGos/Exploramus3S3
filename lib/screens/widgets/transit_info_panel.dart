@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class TransitRoute {
-  final String type; // 'metro' ou 'bus'
+  final String type; // 'metro', 'bus', 'rer', 'ter', 'tgv'
   final String line;
   final String direction;
   final String startStation;
@@ -29,11 +29,53 @@ class TransitInfoPanel extends StatelessWidget {
   }) : super(key: key);
 
   IconData _getTransitIcon(String type) {
-    return type == 'metro' ? Icons.subway : Icons.directions_bus;
+    switch (type) {
+      case 'metro':
+        return Icons.subway;
+      case 'bus':
+        return Icons.directions_bus;
+      case 'rer':
+      case 'ter':
+        return Icons.train;
+      case 'tgv':
+        return Icons.directions_railway;
+      default:
+        return Icons.commute;
+    }
   }
 
   Color _getTransitColor(String type) {
-    return type == 'metro' ? Colors.purple[600]! : Colors.blue[600]!;
+    switch (type) {
+      case 'metro':
+        return Colors.purple[600]!;
+      case 'bus':
+        return Colors.blue[600]!;
+      case 'rer':
+        return Colors.red[600]!;
+      case 'ter':
+        return Colors.green[600]!;
+      case 'tgv':
+        return Colors.orange[600]!;
+      default:
+        return Colors.grey[600]!;
+    }
+  }
+
+  String _getTransitTypeName(String type) {
+    switch (type) {
+      case 'metro':
+        return 'Métro';
+      case 'bus':
+        return 'Bus';
+      case 'rer':
+        return 'RER';
+      case 'ter':
+        return 'TER';
+      case 'tgv':
+        return 'TGV';
+      default:
+        return 'Transport';
+    }
   }
 
   @override
@@ -60,7 +102,7 @@ class TransitInfoPanel extends StatelessWidget {
                     _getTransitIcon(route.type),
                     color: _getTransitColor(route.type),
                   ),
-                  title: Text('${route.type == 'metro' ? 'Métro' : 'Bus'} ${route.line}'),
+                  title: Text('${_getTransitTypeName(route.type)} ${route.line}'),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

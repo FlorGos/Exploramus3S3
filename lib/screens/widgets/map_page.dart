@@ -647,17 +647,5 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
- /* void _addNewMarker() {
-    setState(() {
-      _isAddingMarker = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tap on the map to add a new marker'),
-        duration: Duration(seconds: 2),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-    );
-  }*/
 }
 
