@@ -1,3 +1,4 @@
+import 'package:swipezone/services/open_trip_planner_service.dart';
 import 'dart:math' show pi, sin, cos, sqrt, atan2;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -19,6 +20,7 @@ import 'package:swipezone/screens/widgets/transit_info_panel.dart';
 import 'package:swipezone/screens/widgets/add_marker_dialog.dart';
 import 'package:swipezone/services/geocoding_service.dart';
 import 'package:swipezone/services/ratp_api_service.dart';
+import 'package:swipezone/services/prim_api_service.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -55,7 +57,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<TransitRoute> _transitRoutes = [];
   List<LatLng> _basicPolylinePoints = [];
   bool _isOSRMRouteVisible = false;
-  bool _usingFallbackRoutes = false;
+
 
   @override
   void initState() {
@@ -149,17 +151,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Future<void> _fetchTransitRoutes() async {
     setState(() {
       _isLoadingRoute = true;
-      _usingFallbackRoutes = false;
     });
 
     try {
       final sortedLocations = _sortLocationsByDistance();
       if (sortedLocations.isNotEmpty) {
         final destination = sortedLocations.first;
-        final from = '${widget.userPosition.latitude},${widget.userPosition.longitude}';
-        final to = '${destination.localization.lat},${destination.localization.lng}';
+        final from = widget.userPosition;
+        final to = LatLng(destination.localization.lat!, destination.localization.lng!);
 
-        final routes = await RatpApiService.getJourney(from, to);
+        final routes = await PrimApiService.getJourney(from, to);
 
         if (routes.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -173,14 +174,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           _showTransitInfo = true;
           _isOSRMRouteVisible = false;
           _showNavigationInstructions = false;
-          _usingFallbackRoutes = routes.length == 3 && routes[0].line == '1' && routes[1].line == 'A' && routes[2].line == '38';
         });
-
-        if (_usingFallbackRoutes) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Utilisation de données de transit de secours en raison de problèmes de serveur.')),
-          );
-        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Veuillez sélectionner une destination.')),
@@ -488,7 +482,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _showAddMarkerDialog();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -689,6 +682,5 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
 }
 
