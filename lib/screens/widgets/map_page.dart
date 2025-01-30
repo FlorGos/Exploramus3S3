@@ -18,6 +18,7 @@ import 'package:swipezone/screens/widgets/navigation_instructions.dart';
 import 'package:swipezone/screens/widgets/transit_info_panel.dart';
 import 'package:swipezone/screens/widgets/add_marker_dialog.dart';
 import 'package:swipezone/services/geocoding_service.dart';
+import 'package:swipezone/services/ratp_api_service.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -54,6 +55,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<TransitRoute> _transitRoutes = [];
   List<LatLng> _basicPolylinePoints = [];
   bool _isOSRMRouteVisible = false;
+  bool _usingFallbackRoutes = false;
 
   @override
   void initState() {
@@ -144,6 +146,58 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     });
   }
 
+  Future<void> _fetchTransitRoutes() async {
+    setState(() {
+      _isLoadingRoute = true;
+      _usingFallbackRoutes = false;
+    });
+
+    try {
+      final sortedLocations = _sortLocationsByDistance();
+      if (sortedLocations.isNotEmpty) {
+        final destination = sortedLocations.first;
+        final from = '${widget.userPosition.latitude},${widget.userPosition.longitude}';
+        final to = '${destination.localization.lat},${destination.localization.lng}';
+
+        final routes = await RatpApiService.getJourney(from, to);
+
+        if (routes.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Aucun itinéraire trouvé pour cette destination.')),
+          );
+          return;
+        }
+
+        setState(() {
+          _transitRoutes = routes;
+          _showTransitInfo = true;
+          _isOSRMRouteVisible = false;
+          _showNavigationInstructions = false;
+          _usingFallbackRoutes = routes.length == 3 && routes[0].line == '1' && routes[1].line == 'A' && routes[2].line == '38';
+        });
+
+        if (_usingFallbackRoutes) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Utilisation de données de transit de secours en raison de problèmes de serveur.')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Veuillez sélectionner une destination.')),
+        );
+      }
+    } catch (e) {
+      print('Error fetching transit routes: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la recherche d\'itinéraire. Veuillez réessayer.')),
+      );
+    } finally {
+      setState(() {
+        _isLoadingRoute = false;
+      });
+    }
+  }
+
   void _onTransportModeSelected(TransportMode mode) async {
     if (_selectedMode == mode && _isOSRMRouteVisible) {
       setState(() {
@@ -156,6 +210,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
     setState(() {
       _selectedMode = mode;
+      _isLoadingRoute = true;
     });
 
     String profile;
@@ -177,35 +232,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         break;
       case 'Transit':
       case 'Metro':
-        setState(() {
-          _isOSRMRouteVisible = false;
-          _showNavigationInstructions = false;
-          _showTransitInfo = true;
-          _transitRoutes = [
-            TransitRoute(
-              type: 'metro',
-              line: '4',
-              direction: 'Porte de Clignancourt',
-              startStation: 'Montparnasse',
-              endStation: 'Châtelet',
-              duration: 15,
-            ),
-            TransitRoute(
-              type: 'bus',
-              line: '96',
-              direction: 'Porte des Lilas',
-              startStation: 'Châtelet',
-              endStation: 'République',
-              duration: 20,
-            ),
-          ];
-        });
+      case 'RER':
+      case 'Bus':
+        await _fetchTransitRoutes();
         break;
       default:
         _showTransitInfo = false;
         _isOSRMRouteVisible = false;
         _showNavigationInstructions = false;
     }
+
+    setState(() {
+      _isLoadingRoute = false;
+    });
   }
 
   List<Location> _sortLocationsByDistance() {
@@ -366,6 +405,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     trailing: IconButton(
                       icon: Icon(Icons.delete),
                       onPressed: () {
+                        Navigator.of(context).pop();
                         _showDeleteConfirmationDialog(location);
                       },
                     ),
@@ -407,8 +447,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   widget.locations.remove(location);
                 });
                 Navigator.of(context).pop();
-                _showLocationsList();
                 _updateBasicPolylinePoints();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Location deleted')),
+                );
               },
             ),
           ],
@@ -555,8 +597,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     TransportMode(name: 'Walking', icon: Icons.directions_walk, speedKmPerHour: 5),
                     TransportMode(name: 'Cycling', icon: Icons.directions_bike, speedKmPerHour: 15),
                     TransportMode(name: 'Driving', icon: Icons.directions_car, speedKmPerHour: 50),
-                    TransportMode(name: 'Transit', icon: Icons.directions_bus, speedKmPerHour: 30),
-                    TransportMode(name: 'Metro', icon: Icons.subway, speedKmPerHour: 40),
+                    TransportMode(name: 'Metro', icon: Icons.subway, speedKmPerHour: 30),
+                    TransportMode(name: 'RER', icon: Icons.train, speedKmPerHour: 40),
+                    TransportMode(name: 'Bus', icon: Icons.directions_bus, speedKmPerHour: 20),
                   ],
                   selectedMode: _selectedMode,
                   onListPressed: _showLocationsList,
