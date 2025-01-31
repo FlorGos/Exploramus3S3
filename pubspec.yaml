@@ -39,6 +39,11 @@ dependencies:
   app_settings: ^5.0.0 # Pour ouvrir les paramètres de l'application
   geocoding: ^2.1.0
   osrm: ^0.0.8
+  fl_chart: ^0.70.2
+  intl: ^0.20.2
+  pedometer: ^4.0.2
+  health: ^12.0.1
+  sqflite: ^2.4.1
 
     # Modifiez ici pour être
 
