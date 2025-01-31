@@ -328,7 +328,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   description: " ",
                   schedule: null,
                   contact: null,
-                  imageUrl: null,
+                  imagePath: "null",
                   category: Categories.Unknown,
                   website: null,
                   localization: Localization(address, point.latitude, point.longitude),

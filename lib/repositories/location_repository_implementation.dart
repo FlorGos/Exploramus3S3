@@ -2,7 +2,7 @@ import 'package:swipezone/repositories/location_repository.dart';
 import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:swipezone/repositories/models/location.dart';
-import 'package:http/http.dart' as http;
+//import 'package:http/http.dart' as http; // Removed as image verification is no longer needed
 
 class ILocationRepository implements LocationRepository {
   @override
@@ -11,7 +11,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Tour Eiffel",
         description: "Emblème de Paris, cette tour en fer puddlé de 324 mètres de hauteur est l'un des sites les plus visités au monde.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/85/Tour_Eiffel_Wikimedia_Commons.jpg",
+        imagePath: "lib/assets/images/tour_eiffel.png",
         category: Categories.Tower,
         localization: Localization("Champ de Mars, 5 Avenue Anatole France, 75007 Paris", 48.8584, 2.2945),
         schedule: null,
@@ -21,7 +21,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Louvre",
         description: "Le plus grand musée d'art du monde, abritant la Joconde.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/Louvre_aile_Richelieu.jpg",
+        imagePath: "lib/assets/images/musee_louvre.png",
         category: Categories.Museum,
         localization: Localization("Rue de Rivoli, 75001 Paris", 48.8606, 2.3376),
         schedule: null,
@@ -31,7 +31,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Cathédrale Notre-Dame",
         description: "La cathédrale gothique Notre-Dame est située sur l'île de la Cité.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d0/Cath%C3%A9drale_Notre-Dame_de_Paris%2C_20_March_2014.jpg",
+        imagePath: "lib/assets/images/notre_dame.png",
         category: Categories.Church,
         localization: Localization("6 Parvis Notre-Dame - Pl. Jean-Paul II, 75004 Paris", 48.8529, 2.3508),
         schedule: null,
@@ -41,7 +41,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Arc de Triomphe",
         description: "Construit pour honorer les victoires de Napoléon, il est situé sur la place de l'Étoile.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/79/Arc_de_Triomphe%2C_Paris_21_October_2010.jpg",
+        imagePath: "lib/assets/images/arc_de_triomphe.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place Charles de Gaulle, 75008 Paris", 48.8738, 2.295),
         schedule: null,
@@ -51,7 +51,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Sacré-Cœur",
         description: "La basilique du Sacré-Cœur est un symbole religieux de Montmartre.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/c/c5/Le_sacre_coeur.jpg",
+        imagePath: "lib/assets/images/sacre_coeur.png",
         category: Categories.Church,
         localization: Localization("35 Rue du Chevalier de la Barre, 75018 Paris", 48.8867, 2.3431),
         schedule: null,
@@ -61,7 +61,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Panthéon",
         description: "Le Panthéon est un mausolée pour les grandes figures françaises.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/80/Pantheon_of_Paris_-_panoramio.jpg",
+        imagePath: "lib/assets/images/pantheon_paris.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place du Panthéon, 75005 Paris", 48.8462, 2.3449),
         schedule: null,
@@ -71,7 +71,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Place de la Concorde",
         description: "La plus grande place de Paris, connue pour son obélisque et ses fontaines.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/6/6d/Place_de_la_Concorde%2C_Paris_8e_140402_1.jpg",
+        imagePath: "lib/assets/images/place_de_la_concorde.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place de la Concorde, 75008 Paris", 48.8656, 2.3212),
         schedule: null,
@@ -81,7 +81,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Palais Garnier",
         description: "L'Opéra Garnier est une somptueuse salle de spectacle datant du XIXe siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/dc/Paris_Opera_full_frontal_architecture%2C_May_2009.jpg",
+        imagePath: "lib/assets/images/palais_garnier.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place de l'Opéra, 75009 Paris", 48.8719, 2.3316),
         schedule: null,
@@ -91,7 +91,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Jardin des Tuileries",
         description: "Le jardin des Tuileries est un jardin public historique situé près du Louvre.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Jardin_des_Tuileries_-_Panorama.jpg",
+        imagePath: "lib/assets/images/jardin_des_tuileries.png",
         category: Categories.Park,
         localization: Localization("113 Rue de Rivoli, 75001 Paris", 48.8636, 2.3276),
         schedule: null,
@@ -101,7 +101,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Pont Alexandre III",
         description: "Ce pont richement orné relie les Champs-Élysées et les Invalides.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7a/Pont_Alexandre_III_Paris.jpg",
+        imagePath: "lib/assets/images/pont_alexandre_III.png",
         category: Categories.HistoricalSite,
         localization: Localization("Pont Alexandre III, 75008 Paris", 48.8654, 2.3131),
         schedule: null,
@@ -111,7 +111,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée d'Orsay",
         description: "Musée d'art installé dans une ancienne gare, spécialisé dans l'art du XIXe siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f7/Musee_d%27Orsay%2C_North-West_view%2C_Paris_7e_140207.jpg",
+        imagePath: "lib/assets/images/musee_orsay.png",
         category: Categories.Museum,
         localization: Localization("1 Rue de la Légion d'Honneur, 75007 Paris", 48.8600, 2.3266),
         schedule: null,
@@ -121,7 +121,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Centre Pompidou",
         description: "Centre d'art moderne et contemporain reconnaissable à son architecture unique.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/6/6a/Le_Centre_Pompidou.jpg",
+        imagePath: "lib/assets/images/centre_pompidou.png",
         category: Categories.Museum,
         localization: Localization("Place Georges-Pompidou, 75004 Paris", 48.8606, 2.3522),
         schedule: null,
@@ -131,7 +131,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Sainte-Chapelle",
         description: "Chapelle gothique du XIIIe siècle célèbre pour ses magnifiques vitraux.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b5/Sainte_Chapelle_-_Upper_level_1.jpg",
+        imagePath: "lib/assets/images/sainte_chapelle.png",
         category: Categories.Church,
         localization: Localization("8 Boulevard du Palais, 75001 Paris", 48.8554, 2.3451),
         schedule: null,
@@ -141,7 +141,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Rodin",
         description: "Musée dédié au sculpteur Auguste Rodin, situé dans un hôtel particulier avec jardin.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/55/Hotel_Biron%2C_Mus%C3%A9e_Rodin%2C_Paris_2017.jpg",
+        imagePath: "lib/assets/images/musee_rodin.png",
         category: Categories.Museum,
         localization: Localization("77 Rue de Varenne, 75007 Paris", 48.8555, 2.3154),
         schedule: null,
@@ -151,7 +151,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Jardin du Luxembourg",
         description: "Grand jardin public inspiré des jardins italiens, populaire auprès des Parisiens.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Jardin_du_Luxembourg_2010.jpg",
+        imagePath: "lib/assets/images/jardin_luxembourg.png",
         category: Categories.Park,
         localization: Localization("75006 Paris", 48.8462, 2.3372),
         schedule: null,
@@ -161,7 +161,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Moulin Rouge",
         description: "Célèbre cabaret parisien connu pour ses spectacles de French Cancan.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/54/Moulin_Rouge%2C_November_2012.jpg",
+        imagePath: "lib/assets/images/moulin_rouge.png",
         category: Categories.HistoricalSite,
         localization: Localization("82 Boulevard de Clichy, 75018 Paris", 48.8842, 2.3322),
         schedule: null,
@@ -171,7 +171,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Les Invalides",
         description: "Complexe de bâtiments abritant des musées et monuments liés à l'histoire militaire de la France.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d5/Les_Invalides_-_Dome_Church_-_panoramio.jpg",
+        imagePath: "lib/assets/images/les_invalides.png",
         category: Categories.Museum,
         localization: Localization("129 Rue de Grenelle, 75007 Paris", 48.8559, 2.3127),
         schedule: null,
@@ -181,7 +181,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Palais de l'Élysée",
         description: "Résidence officielle du président de la République française.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/24/Paris_-_palais_de_l%27%C3%89lys%C3%A9e_-_entr%C3%A9e.jpg",
+        imagePath: "lib/assets/images/palais_elysee.png",
         category: Categories.HistoricalSite,
         localization: Localization("55 Rue du Faubourg Saint-Honoré, 75008 Paris", 48.8706, 2.3165),
         schedule: null,
@@ -191,7 +191,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Palais-Bourbon",
         description: "Siège de l'Assemblée nationale française.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7a/Palais_Bourbon_Paris.jpg",
+        imagePath: "lib/assets/images/palais_bourbon.png",
         category: Categories.HistoricalSite,
         localization: Localization("126 Rue de l'Université, 75007 Paris", 48.8620, 2.3181),
         schedule: null,
@@ -201,7 +201,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Palais du Luxembourg",
         description: "Siège du Sénat français.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4f/Palais_du_Luxembourg_-_panoramio.jpg",
+        imagePath: "lib/assets/images/palais_luxembourg.png",
         category: Categories.HistoricalSite,
         localization: Localization("15 Rue de Vaugirard, 75006 Paris", 48.8462, 2.3371),
         schedule: null,
@@ -211,7 +211,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Place des Vosges",
         description: "La plus ancienne place de Paris.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5d/Place_des_Vosges_140605_1.jpg",
+        imagePath: "lib/assets/images/place_des_vosges.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place des Vosges, 75004 Paris", 48.8559, 2.3659),
         schedule: null,
@@ -221,7 +221,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Carnavalet",
         description: "Musée dédié à l'histoire de Paris.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7a/Mus%C3%A9e_Carnavalet_Paris_2.jpg",
+        imagePath: "lib/assets/images/musee_carnavalet.png",
         category: Categories.Museum,
         localization: Localization("23 Rue de Sévigné, 75003 Paris", 48.8570, 2.3624),
         schedule: null,
@@ -231,7 +231,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Picasso",
         description: "Musée dédié à l'œuvre du célèbre peintre Pablo Picasso.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/0c/Mus%C3%A9e_Picasso_%28Paris%29_-_Fa%C3%A7ade_principale.jpg",
+        imagePath: "lib/assets/images/musee_picasso.png",
         category: Categories.Museum,
         localization: Localization("5 Rue de Thorigny, 75003 Paris", 48.8643, 2.3656),
         schedule: null,
@@ -241,7 +241,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Château de Vincennes",
         description: "Un château médiéval fortifié situé à l'est de Paris.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/79/Chateau_de_Vincennes_Donjon.jpg",
+        imagePath: "lib/assets/images/chateau_vincennes.png",
         category: Categories.HistoricalSite,
         localization: Localization("Avenue de Paris, 94300 Vincennes", 48.8502, 2.4365),
         schedule: null,
@@ -251,7 +251,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Chasse et de la Nature",
         description: "Musée unique dédié à l'histoire de la chasse et de la nature.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/39/Mus%C3%A9e_de_la_Chasse_et_de_la_Nature.jpg",
+        imagePath: "lib/assets/images/musee_chasse_et_nature.png",
         category: Categories.Museum,
         localization: Localization("62 Rue des Archives, 75003 Paris", 48.8583, 2.3647),
         schedule: null,
@@ -261,7 +261,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Institut du Monde Arabe",
         description: "Un centre culturel dédié à la culture arabe et à l'art du monde arabe.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8b/Institut_du_Monde_Arabe%2C_Paris_-_panoramio.jpg",
+        imagePath: "lib/assets/images/institut_monde_arabe.png",
         category: Categories.Museum,
         localization: Localization("1 Rue des Fossés Saint-Bernard, 75005 Paris", 48.8495, 2.3610),
         schedule: null,
@@ -271,7 +271,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Monnaie de Paris",
         description: "Musée consacré à l'histoire de la monnaie et à la frappe des pièces de monnaie.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/57/Monnaie_de_Paris_2013.jpg",
+        imagePath: "lib/assets/images/musee_monnaie_paris.png",
         category: Categories.Museum,
         localization: Localization("11 Quai de Conti, 75006 Paris", 48.8525, 2.3391),
         schedule: null,
@@ -281,7 +281,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de l'Orangerie",
         description: "Musée abritant les célèbres Nymphéas de Claude Monet et d'autres œuvres impressionnistes.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/2e/Mus%C3%A9e_de_l%27Orangerie%2C_Paris_2_October_2016.jpg",
+        imagePath: "lib/assets/images/musee_orangerie.png",
         category: Categories.Museum,
         localization: Localization("Jardin des Tuileries, 75001 Paris", 48.8638, 2.3215),
         schedule: null,
@@ -291,7 +291,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Marmottan Monet",
         description: "Musée d'art impressionniste, célèbre pour ses collections de Claude Monet.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/e/e5/Mus%C3%A9e_Marmottan_Monet%2C_Paris_16th_002.jpg",
+        imagePath: "lib/assets/images/musee_marmottan_monet.png",
         category: Categories.Museum,
         localization: Localization("2 Rue Louis Boilly, 75016 Paris", 48.8622, 2.2776),
         schedule: null,
@@ -301,7 +301,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Jacquemart-André",
         description: "Hôtel particulier transformé en musée, présentant une collection d'art du 18e siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Mus%C3%A9e_Jacquemart-Andr%C3%A9.jpg",
+        imagePath: "lib/assets/images/musee_jacquemart_andre.png",
         category: Categories.Museum,
         localization: Localization("158 Boulevard Haussmann, 75008 Paris", 48.8756, 2.3119),
         schedule: null,
@@ -311,7 +311,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Guimet",
         description: "Musée national des arts asiatiques.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d2/Mus%C3%A9e_Guimet_Paris.jpg",
+        imagePath: "lib/assets/images/musee_guimet.png",
         category: Categories.Museum,
         localization: Localization("6 Place d'Iéna, 75116 Paris", 48.8651, 2.2936),
         schedule: null,
@@ -321,7 +321,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de Cluny",
         description: "Musée national du Moyen Âge.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d9/Mus%C3%A9e_de_Cluny_%28Paris%29_-_Cour_int%C3%A9rieure.jpg",
+        imagePath: "lib/assets/images/musee_cluny.png",
         category: Categories.Museum,
         localization: Localization("28 Rue du Sommerard, 75005 Paris", 48.8505, 2.3443),
         schedule: null,
@@ -331,7 +331,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée du quai Branly - Jacques Chirac",
         description: "Musée des arts et civilisations d'Afrique, d'Asie, d'Océanie et des Amériques.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Mus%C3%A9e_du_quai_Branly_2013.jpg",
+        imagePath: "lib/assets/images/musee_quai_branly.png",
         category: Categories.Museum,
         localization: Localization("37 Quai Branly, 75007 Paris", 48.8608, 2.2973),
         schedule: null,
@@ -341,7 +341,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Nissim de Camondo",
         description: "Musée d'arts décoratifs du XVIIIe siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/16/Mus%C3%A9e_Nissim_de_Camondo_001.jpg",
+        imagePath: "lib/assets/images/musee_nissim_de_camondo.png",
         category: Categories.Museum,
         localization: Localization("63 Rue de Monceau, 75008 Paris", 48.8796, 2.3149),
         schedule: null,
@@ -351,7 +351,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Grévin",
         description: "Célèbre musée de cire présentant des personnalités historiques et contemporaines.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7e/Mus%C3%A9e_Gr%C3%A9vin_Paris.jpg",
+        imagePath: "lib/assets/images/musee_grevin.png",
         category: Categories.Museum,
         localization: Localization("10 Boulevard Montmartre, 75009 Paris", 48.8721, 2.3426),
         schedule: null,
@@ -361,7 +361,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Vie Romantique",
         description: "Maison-musée dédiée à l'époque romantique du 19e siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/77/Mus%C3%A9e_de_la_Vie_Romantique.jpg",
+        imagePath: "lib/assets/images/musee_vie_romantique.png",
         category: Categories.Museum,
         localization: Localization("16 Rue Chaptal, 75009 Paris", 48.8822, 2.3279),
         schedule: null,
@@ -371,7 +371,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée des Égouts de Paris",
         description: "Musée souterrain présentant l'histoire et le fonctionnement des égouts parisiens.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5d/Mus%C3%A9e_des_%C3%89gouts_de_Paris.jpg",
+        imagePath: "lib/assets/images/musee_egouts_de_paris.png",
         category: Categories.Museum,
         localization: Localization("Pont de l'Alma, 75007 Paris", 48.8636, 2.3017),
         schedule: null,
@@ -381,7 +381,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée du Parfum",
         description: "Musée dédié à l'histoire et à l'art de la parfumerie.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a3/Mus%C3%A9e_du_Parfum_Paris.jpg",
+        imagePath: "lib/assets/images/musee_parfum.png",
         category: Categories.Museum,
         localization: Localization("9 Rue Scribe, 75009 Paris", 48.8714, 2.3295),
         schedule: null,
@@ -391,7 +391,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Magie",
         description: "Musée consacré à l'art de la magie et de l'illusion.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/7e/Mus%C3%A9e_de_la_Magie_Paris.jpg",
+        imagePath: "lib/assets/images/musee_magie.png",
         category: Categories.Museum,
         localization: Localization("11 Rue Saint-Paul, 75004 Paris", 48.8535, 2.3665),
         schedule: null,
@@ -401,7 +401,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée des Arts Forains",
         description: "Musée privé consacré aux arts du spectacle et aux manèges anciens.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3b/Mus%C3%A9e_des_Arts_Forains.jpg",
+        imagePath: "lib/assets/images/musee_arts_forains.png",
         category: Categories.Museum,
         localization: Localization("53 Avenue des Terroirs de France, 75012 Paris", 48.8336, 2.3867),
         schedule: null,
@@ -411,7 +411,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Bourdelle",
         description: "Musée dédié à l'œuvre du sculpteur Antoine Bourdelle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5d/Mus%C3%A9e_Bourdelle.jpg",
+        imagePath: "lib/assets/images/musee_bourdelle.png",
         category: Categories.Museum,
         localization: Localization("18 Rue Antoine Bourdelle, 75015 Paris", 48.8425, 2.3214),
         schedule: null,
@@ -421,7 +421,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Zadkine",
         description: "Atelier-musée du sculpteur Ossip Zadkine.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Mus%C3%A9e_Zadkine.jpg",
+        imagePath: "lib/assets/images/musee_zadkine.png",
         category: Categories.Museum,
         localization: Localization("100 bis Rue d'Assas, 75006 Paris", 48.8424, 2.3304),
         schedule: null,
@@ -431,7 +431,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Cognacq-Jay",
         description: "Musée d'art du XVIIIe siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9f/Mus%C3%A9e_Cognacq-Jay.jpg",
+        imagePath: "lib/assets/images/musee_cognac_jay.png",
         category: Categories.Museum,
         localization: Localization("8 Rue Elzévir, 75003 Paris", 48.8586, 2.3625),
         schedule: null,
@@ -441,7 +441,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Musique",
         description: "Musée présentant une collection d'instruments de musique et l'histoire de la musique.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/07/Mus%C3%A9e_de_la_Musique_Paris.jpg",
+        imagePath: "lib/assets/images/musee_musique.png",
         category: Categories.Museum,
         localization: Localization("221 Avenue Jean Jaurès, 75019 Paris", 48.8890, 2.3935),
         schedule: null,
@@ -451,7 +451,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de l'Air et de l'Espace",
         description: "Musée consacré à l'aéronautique et à l'espace.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f5/Mus%C3%A9e_de_l%27Air_et_de_l%27Espace.jpg",
+        imagePath: "lib/assets/images/musee_air_espace.png",
         category: Categories.Museum,
         localization: Localization("Aéroport de Paris-Le Bourget, 93350 Le Bourget", 48.9472, 2.4372),
         schedule: null,
@@ -461,7 +461,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Contrefaçon",
         description: "Musée unique dédié à l'histoire et aux enjeux de la contrefaçon.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3f/Mus%C3%A9e_de_la_Contrefa%C3%A7on_Paris.jpg",
+        imagePath: "lib/assets/images/musee_contrefacon.png",
         category: Categories.Museum,
         localization: Localization("16 Rue de la Faisanderie, 75116 Paris", 48.8672, 2.2778),
         schedule: null,
@@ -471,7 +471,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de l'Éventail",
         description: "Petit musée spécialisé dans l'art et l'histoire des éventails.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Mus%C3%A9e_de_l%27%C3%89ventail_Paris.jpg",
+        imagePath: "lib/assets/images/musee_eventail.png",
         category: Categories.Museum,
         localization: Localization("2 Boulevard de Strasbourg, 75010 Paris", 48.8697, 2.3553),
         schedule: null,
@@ -481,7 +481,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Préfecture de Police",
         description: "Musée dédié à l'histoire de la police et de la sécurité publique.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d4/Mus%C3%A9e_de_la_Pr%C3%A9fecture_de_Police.jpg",
+        imagePath: "lib/assets/images/musee_prefecture_police.png",
         category: Categories.Museum,
         localization: Localization("4 Rue de la Montagne Sainte-Geneviève, 75005 Paris", 48.8482, 2.3477),
         schedule: null,
@@ -491,7 +491,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée des Arts et Métiers",
         description: "Musée présentant l'histoire des inventions, des technologies et des sciences.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/71/Mus%C3%A9e_des_Arts_et_M%C3%A9tiers_Paris.jpg",
+        imagePath: "lib/assets/images/musee_arts_et_metiers.png",
         category: Categories.Museum,
         localization: Localization("60 Rue Réaumur, 75003 Paris", 48.8670, 2.3582),
         schedule: null,
@@ -501,7 +501,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de l'Opéra",
         description: "Musée consacré à l'histoire de l'Opéra Garnier et à l'art lyrique.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/24/Mus%C3%A9e_de_l%27Op%C3%A9ra.jpg",
+        imagePath: "lib/assets/images/musee_opera.png",
         category: Categories.Museum,
         localization: Localization("8 Rue Scribe, 75009 Paris", 48.8720, 2.3319),
         schedule: null,
@@ -511,7 +511,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Poupée",
         description: "Musée consacré aux poupées et aux jouets anciens.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/9/9c/Mus%C3%A9e_de_la_Poup%C3%A9e_Paris.jpg",
+        imagePath: "lib/assets/images/musee_poupee.png",
         category: Categories.Museum,
         localization: Localization("Impasse Berthaud, 75003 Paris", 48.8601, 2.3539),
         schedule: null,
@@ -521,7 +521,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Cité de la Musique",
         description: "Centre culturel dédié à la musique, avec des concerts et des expositions.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/14/Cit%C3%A9_de_la_Musique_Paris.jpg",
+        imagePath: "lib/assets/images/cite_musique.png",
         category: Categories.Museum,
         localization: Localization("221 Avenue Jean-Jaurès, 75019 Paris", 48.8877, 2.3945),
         schedule: null,
@@ -531,7 +531,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée du Chocolat",
         description: "Musée interactif sur l'histoire du chocolat et des techniques de fabrication.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/23/Mus%C3%A9e_du_Chocolat_Paris.jpg",
+        imagePath: "lib/assets/images/musee_chocolat.png",
         category: Categories.Museum,
         localization: Localization("28 Boulevard de Bonne Nouvelle, 75010 Paris", 48.8690, 2.3470),
         schedule: null,
@@ -541,7 +541,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Santé des Armées",
         description: "Musée présentant l'histoire de la médecine militaire et des soins de santé dans les armées.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/c/c9/Mus%C3%A9e_du_Service_de_sant%C3%A9_des_arm%C3%A9es.jpg",
+        imagePath: "lib/assets/images/musee_sante_armees.png",
         category: Categories.Museum,
         localization: Localization("1 Place Alphonse Laveran, 75005 Paris", 48.8410, 2.3414),
         schedule: null,
@@ -551,7 +551,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Curie",
         description: "Musée dédié à l'histoire des découvertes scientifiques de Marie Curie.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/2/21/Mus%C3%A9e_Curie_Paris.jpg",
+        imagePath: "lib/assets/images/musee_curie.png",
         category: Categories.Museum,
         localization: Localization("1 Rue Pierre et Marie Curie, 75005 Paris", 48.8447, 2.3449),
         schedule: null,
@@ -561,7 +561,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée du Luxembourg",
         description: "Musée exposant des œuvres d'art classique et moderne.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/0/0e/Mus%C3%A9e_du_Luxembourg_Paris.jpg",
+        imagePath: "lib/assets/images/musee_luxembourg.png",
         category: Categories.Museum,
         localization: Localization("19 Rue de Vaugirard, 75006 Paris", 48.8440, 2.3346),
         schedule: null,
@@ -571,7 +571,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée des Arts Décoratifs",
         description: "Musée dédié à l'art décoratif et aux objets du quotidien.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4f/Mus%C3%A9e_des_Arts_D%C3%A9coratifs_Paris.jpg",
+        imagePath: "lib/assets/images/musee_arts_decoratifs.png",
         category: Categories.Museum,
         localization: Localization("107 Rue de Rivoli, 75001 Paris", 48.8636, 2.3350),
         schedule: null,
@@ -581,7 +581,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée du Petit Palais",
         description: "Musée abritant une collection d'art du XIXe siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/e/ea/Mus%C3%A9e_du_Petit_Palais_Paris.jpg",
+        imagePath: "lib/assets/images/musee_petit_palais.png",
         category: Categories.Museum,
         localization: Localization("Avenue Winston Churchill, 75008 Paris", 48.8664, 2.3122),
         schedule: null,
@@ -591,7 +591,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Cité de l'Architecture et du Patrimoine",
         description: "Musée qui présente l'architecture et le patrimoine de la France.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Mus%C3%A9e_de_la_Cit%C3%A9_de_l%27Architecture_Paris.jpg",
+        imagePath: "lib/assets/images/musee_architecture_patrimoine.png",
         category: Categories.Museum,
         localization: Localization("1 Place du Trocadéro et du 11 Novembre, 75116 Paris", 48.8637, 2.2901),
         schedule: null,
@@ -601,7 +601,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Police",
         description: "Musée consacré à l'histoire de la police à travers les siècles.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/c/c6/Mus%C3%A9e_de_la_Police_Paris.jpg",
+        imagePath: "lib/assets/images/musee_prefecture_police.png",
         category: Categories.Museum,
         localization: Localization("4 Rue de la Montagne Sainte-Geneviève, 75005 Paris", 48.8482, 2.3477),
         schedule: null,
@@ -611,7 +611,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Cernuschi",
         description: "Musée des Arts de l'Asie de la ville de Paris.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/54/Mus%C3%A9e_Cernuschi_Paris.jpg",
+        imagePath: "lib/assets/images/musee_cernuschi.png",
         category: Categories.Museum,
         localization: Localization("7 Avenue Velasquez, 75008 Paris", 48.8794, 2.3122),
         schedule: null,
@@ -621,7 +621,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de la Vie Romantique",
         description: "Maison-musée dédiée à l'époque romantique du 19e siècle.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/7/77/Mus%C3%A9e_de_la_Vie_Romantique.jpg",
+        imagePath: "lib/assets/images/musee_vie_romantique.png",
         category: Categories.Museum,
         localization: Localization("16 Rue Chaptal, 75009 Paris", 48.8822, 2.3279),
         schedule: null,
@@ -631,7 +631,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée Carnavalet",
         description: "Musée de l'histoire de Paris, de la préhistoire à nos jours.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/54/Musee_Carnavalet_Wikimedia_Commons.jpg",
+        imagePath: "lib/assets/images/musee_carnavalet.png",
         category: Categories.Museum,
         localization: Localization("23 Rue de Sévigné, 75003 Paris", 48.8570, 2.3624),
         schedule: null,
@@ -641,7 +641,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de Montmartre",
         description: "Musée dédié à l'histoire et à la culture du quartier de Montmartre.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/8/89/Mus%C3%A9e_de_Montmartre.jpg",
+        imagePath: "lib/assets/images/musee_montmartre.png",
         category: Categories.Museum,
         localization: Localization("12 Rue Cortot, 75018 Paris", 48.8876, 2.3384),
         schedule: null,
@@ -651,7 +651,7 @@ class ILocationRepository implements LocationRepository {
       Location(
         nom: "Musée de l'Homme",
         description: "Musée d'anthropologie situé dans le Palais de Chaillot.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3d/Mus%C3%A9e_de_l%27Homme_Paris.jpg",
+        imagePath: "lib/assets/images/musee_homme.png",
         category: Categories.Museum,
         localization: Localization("17 Place du Trocadéro, 75116 Paris", 48.8619, 2.2867),
         schedule: null,
@@ -659,9 +659,9 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée national Eugène Delacroix",
+        nom: "Muséenational Eugène Delacroix",
         description: "Musée dédié au peintre Eugène Delacroix.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1a/Mus%C3%A9e_national_Eug%C3%A8ne_Delacroix.jpg",
+        imagePath: "lib/assets/images/musee_eugene_delacroix.png",
         category: Categories.Museum,
         localization: Localization("6 Rue de Furstenberg, 75006 Paris", 48.8547, 2.3344),
         schedule: null,
@@ -670,8 +670,8 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Musée national Gustave Moreau",
-        description: "Musée consacré à l'œuvre du peintre symboliste Gustave Moreau.",
-        imageUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5f/Mus%C3%A9e_Gustave_Moreau.jpg",
+        description:        "Musée consacré à l'œuvre du peintre symboliste Gustave Moreau.",
+        imagePath: "lib/assets/images/musee_gustave_moreau.png",
         category: Categories.Museum,
         localization: Localization("14 Rue de la Rochefoucauld, 75009 Paris", 48.8788, 2.3337),
         schedule: null,
@@ -680,22 +680,7 @@ class ILocationRepository implements LocationRepository {
       ),
     ];
 
-    // Vérification des URLs d'images
-    for (var location in locations) {
-      if (location.imageUrl != null) {
-        try {
-          final response = await http.head(Uri.parse(location.imageUrl!));
-          if (response.statusCode != 200) {
-            print('Image non disponible pour ${location.nom}: ${location.imageUrl}');
-            location.imageUrl = null; // Maintenant ceci est valide
-          }
-        } catch (e) {
-          print('Erreur lors de la vérification de l\'image pour ${location.nom}: $e');
-          location.imageUrl = null; // Maintenant ceci est valide
-        }
-      }
-    }
-
     return locations;
   }
 }
+

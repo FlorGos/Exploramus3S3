@@ -8,7 +8,7 @@ class Location {
   final String description;
   final WeeklySchedule? schedule;
   final Contact? contact;
-  String? imageUrl;  // Changé de final à variable
+  final String imagePath;
   final Categories category;
   final String? website;
   final Localization localization;
@@ -19,7 +19,7 @@ class Location {
     required this.description,
     this.schedule,
     this.contact,
-    this.imageUrl,
+    required this.imagePath,
     required this.category,
     this.website,
     required this.localization,
@@ -32,7 +32,7 @@ class Location {
       'description': description,
       'schedule': schedule?.toJson(),
       'contact': contact?.toJson(),
-      'imageUrl': imageUrl,
+      'imagePath': imagePath,
       'category': category.toString(),
       'website': website,
       'localization': localization.toJson(),
@@ -45,7 +45,7 @@ class Location {
       description: this.description,
       schedule: this.schedule,
       contact: this.contact,
-      imageUrl: this.imageUrl,
+      imagePath: this.imagePath,
       category: this.category,
       website: this.website,
       localization: Localization(
@@ -63,7 +63,7 @@ class Location {
       description: json['description'],
       schedule: json['schedule'] != null ? WeeklySchedule.fromJson(json['schedule']) : null,
       contact: json['contact'] != null ? Contact.fromJson(json['contact']) : null,
-      imageUrl: json['imageUrl'],
+      imagePath: json['imagePath'],
       category: Categories.values.firstWhere((e) => e.toString() == json['category']),
       website: json['website'],
       localization: Localization.fromJson(json['localization']),
@@ -71,4 +71,3 @@ class Location {
     );
   }
 }
-

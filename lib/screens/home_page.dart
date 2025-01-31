@@ -207,9 +207,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          location.imageUrl != null
+                          location.imagePath != null
                               ? Image.network(
-                            location.imageUrl!,
+                            location.imagePath!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
