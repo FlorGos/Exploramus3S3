@@ -58,7 +58,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<LatLng> _basicPolylinePoints = [];
   bool _isOSRMRouteVisible = false;
   late MapController _mapController;
-
+  bool _showMarkersList = false;
+  bool _isListVisible = true;
 
   @override
   void initState() {
@@ -86,10 +87,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _toggleVisibility() {
     setState(() {
       _isBarVisible = !_isBarVisible;
+      _isListVisible = _isBarVisible;
       if (_isBarVisible) {
         _controller.forward();
       } else {
         _controller.reverse();
+        _showMarkersList = false;
       }
     });
   }
@@ -382,39 +385,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _showLocationsList() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Selected Locations'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: widget.locations.map((location) =>
-                  ListTile(
-                    title: Text(location.nom),
-                    subtitle: Text(location.description ?? ''),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _showDeleteConfirmationDialog(location);
-                      },
-                    ),
-                  )
-              ).toList(),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+    setState(() {
+      _showMarkersList = !_showMarkersList;
+    });
   }
 
   void _showDeleteConfirmationDialog(Location location) {
@@ -478,6 +451,55 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _addNewMarker() {
     _showAddMarkerDialog();
   }
+
+  Widget _buildMarkersList() {
+    return AnimatedPositioned(
+      duration: Duration(milliseconds: 300),
+      left: (_showMarkersList && _isListVisible) ? 16 : -220,
+      top: 16,
+      bottom: 100,
+      width: 200,
+      child: Visibility(
+        visible: _isListVisible,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Markers', style: TextStyle(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: widget.locations.length,
+                  itemBuilder: (context, index) {
+                    final location = widget.locations[index];
+                    return ListTile(
+                      title: Text(location.nom, style: TextStyle(fontSize: 14)),
+                      subtitle: Text(location.description ?? '', style: TextStyle(fontSize: 12)),
+                      onTap: () {
+                        _mapController.move(
+                            LatLng(location.localization.lat!, location.localization.lng!),
+                            15.0
+                        );
+                      },
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete, size: 20),
+                        onPressed: () => _showDeleteConfirmationDialog(location),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -555,6 +577,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
+          _buildMarkersList(),
           Positioned(
             top: 16,
             right: 16,
@@ -714,4 +737,3 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 }
-
