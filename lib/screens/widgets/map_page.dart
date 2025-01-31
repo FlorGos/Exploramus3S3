@@ -57,6 +57,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   List<TransitRoute> _transitRoutes = [];
   List<LatLng> _basicPolylinePoints = [];
   bool _isOSRMRouteVisible = false;
+  late MapController _mapController;
 
 
   @override
@@ -73,6 +74,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       curve: Curves.easeInOut,
     );
     _controller.forward();
+    _mapController = MapController();
   }
 
   @override
@@ -268,17 +270,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     return _totalDistance;
   }
 
-  void _resetMarkers() {
+  void _resetMarkerColors() {
     setState(() {
-      for (int i = 0; i < widget.locations.length; i++) {
-        widget.locations[i].localization.lat = _initialLocations[i].localization.lat;
-        widget.locations[i].localization.lng = _initialLocations[i].localization.lng;
-      }
-      _movingLocation = null;
-      _updateBasicPolylinePoints();
+      // Cette méthode ne fait rien directement, car les couleurs sont gérées par _getMarkerColor
+      // Nous forçons juste un rafraîchissement de l'état pour redessiner les marqueurs
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Marqueurs réinitialisés à leur position initiale'), backgroundColor: Theme.of(context).primaryColor),
+      SnackBar(content: Text('Couleurs des marqueurs réinitialisées'), backgroundColor: Theme.of(context).primaryColor),
     );
   }
 
@@ -289,7 +287,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     } else if (locationManager.likedLocations.contains(location)) {
       return Colors.red;
     }
-    return Theme.of(context).primaryColor;
+    return Theme.of(context).primaryColor; // Couleur par défaut pour les autres marqueurs
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng point) {
@@ -491,6 +489,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       body: Stack(
         children: [
           FlutterMap(
+            mapController: _mapController,
             options: MapOptions(
               center: widget.userPosition,
               zoom: 13.0,
@@ -557,24 +556,45 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ],
           ),
           Positioned(
-            top: 16,  // Distance from the top of the map
-            right: 16,  // Distance from the right edge of the map
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: FloatingActionButton(
-                heroTag: "toggleVisibility",
-                child: Icon(
-                  _isBarVisible ? Icons.visibility_off : Icons.visibility,
-                  size: 20, // Reduced icon size
+            top: 16,
+            right: 16,
+            child: Column(
+              children: [
+                FloatingActionButton(
+                  heroTag: "toggleVisibility",
+                  child: Icon(
+                    _isBarVisible ? Icons.visibility_off : Icons.visibility,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                  onPressed: _toggleVisibility,
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                  elevation: 4,
+                  mini: true,
                 ),
-                onPressed: _toggleVisibility,
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
-                elevation: 4, // Add some elevation for better visibility
-                mini: true, // Use a smaller FAB size
-              ),
+                if (_isBarVisible) ...[
+                  SizedBox(height: 8),
+                  FloatingActionButton(
+                    heroTag: "recenterMap",
+                    child: Icon(Icons.my_location, size: 20, color: Colors.white),
+                    onPressed: () {
+                      _mapController.move(widget.userPosition, 13.0);
+                    },
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                    elevation: 4,
+                    mini: true,
+                  ),
+                  SizedBox(height: 8),
+                  FloatingActionButton(
+                    heroTag: "resetColors",
+                    child: Icon(Icons.color_lens, size: 20, color: Colors.white),
+                    onPressed: _resetMarkerColors,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                    elevation: 4,
+                    mini: true,
+                  ),
+                ],
+              ],
             ),
           ),
           if (_isLoadingRoute)
@@ -610,7 +630,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   onAddPressed: _addNewMarker,
                   totalDistance: _getTotalDistance(),
                   onTransportModeSelected: _onTransportModeSelected,
-                  onResetPressed: _resetMarkers,
+                  onResetPressed: _resetMarkerColors,
                 ),
               ],
             ),

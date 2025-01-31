@@ -44,6 +44,8 @@ dependencies:
   pedometer: ^4.0.2
   health: ^12.0.1
   sqflite: ^2.4.1
+  nfc_manager: ^3.5.0
+  qr_flutter: ^4.1.0
 
     # Modifiez ici pour être
 

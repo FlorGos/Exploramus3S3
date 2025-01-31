@@ -35,7 +35,7 @@ class TransparentBottomBar extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ElevatedButton.icon(
-                    icon: Icon(mode.icon, size: 20),
+                    icon: Icon(mode.icon, size: 20, color: Colors.white),
                     label: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -66,7 +66,7 @@ class TransparentBottomBar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ElevatedButton.icon(
-                icon: Icon(Icons.list, size: 20),
+                icon: Icon(Icons.list, size: 20, color: Colors.white),
                 label: Text('List', style: TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
@@ -82,7 +82,7 @@ class TransparentBottomBar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ElevatedButton.icon(
-                icon: Icon(Icons.add_location, size: 20),
+                icon: Icon(Icons.add_location, size: 20, color: Colors.white),
                 label: Text('Add', style: TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
@@ -98,7 +98,7 @@ class TransparentBottomBar extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ElevatedButton.icon(
-                icon: Icon(Icons.refresh, size: 20),
+                icon: Icon(Icons.refresh, size: 20, color: Colors.white),
                 label: Text('Réinitialiser', style: TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
