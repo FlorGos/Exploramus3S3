@@ -275,11 +275,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   void _resetMarkerColors() {
     setState(() {
-      // Cette méthode ne fait rien directement, car les couleurs sont gérées par _getMarkerColor
-      // Nous forçons juste un rafraîchissement de l'état pour redessiner les marqueurs
+      widget.locations.clear();
+      widget.locations.addAll(_initialLocations.map((loc) => loc.clone()));
     });
+    _updateBasicPolylinePoints();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Couleurs des marqueurs réinitialisées'), backgroundColor: Theme.of(context).primaryColor),
+      SnackBar(content: Text('Marqueurs réinitialisés'), backgroundColor: Theme.of(context).primaryColor),
     );
   }
 
@@ -737,3 +738,4 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 }
+
