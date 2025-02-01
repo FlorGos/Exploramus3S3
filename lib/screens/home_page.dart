@@ -7,6 +7,7 @@ import 'package:swipezone/screens/SettingsPage.dart';
 import 'package:swipezone/screens/pedometer_page.dart';
 import 'package:swipezone/screens/nfc_page.dart';
 import 'package:swipezone/screens/location_detail_page.dart';
+import 'package:swipezone/screens/action.dart' as custom;
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key, required String title}) : super(key: key);
@@ -23,6 +24,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   late Animation<Offset> _animation;
   double _dragPercent = 0;
   Offset _dragStart = Offset.zero;
+  final List<custom.Action> _actionHistory = [];
 
   @override
   void initState() {
@@ -46,10 +48,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _locationManager.saveState();
-    } else if (state == AppLifecycleState.resumed) {
-      _loadLocations();
+    if (state == AppLifecycleState.resumed) {
+      _loadLocations(); // Reload locations when app is resumed
     }
   }
 
@@ -69,6 +69,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   void _handleLike() {
     _animateCard(Offset(1, 0)).then((_) {
       _locationManager.like();
+      _actionHistory.add(custom.Action('like', _locations[_currentIndex].nom));
       _moveToNextCard();
     });
   }
@@ -76,6 +77,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   void _handleDislike() {
     _animateCard(Offset(-1, 0)).then((_) {
       _locationManager.dislike();
+      _actionHistory.add(custom.Action('dislike', _locations[_currentIndex].nom));
       _moveToNextCard();
     });
   }
@@ -83,6 +85,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   void _handleFavorite() {
     _animateCard(Offset(0, -1)).then((_) {
       _locationManager.favorite();
+      _actionHistory.add(custom.Action('favorite', _locations[_currentIndex].nom));
       _moveToNextCard();
     });
   }
@@ -110,15 +113,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
   }
 
   void _handleUndo() {
-    setState(() {
+    if (_actionHistory.isNotEmpty) {
+      final lastAction = _actionHistory.removeLast();
       Location? lastLocation = _locationManager.undo();
       if (lastLocation != null) {
-        _locations.insert(0, lastLocation);
-        if (_currentIndex > 0) {
-          _currentIndex--;
-        }
+        setState(() {
+          _locations.insert(_currentIndex, lastLocation);
+          _currentIndex = _locations.indexOf(lastLocation); // Update current index
+        });
+        _locationManager.saveState(); // Save state after undo
       }
-    });
+    }
   }
 
   void _showAllLocationsVisitedDialog() {
@@ -297,7 +302,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback? onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
       child: Column(
@@ -355,11 +360,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                   ),
                   IconButton(
                     icon: Icon(Icons.map, color: Colors.black87),
-                    onPressed: () {
+                    onPressed: () async {
+                      await _locationManager.saveState(); // Save state before navigating
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => SelectPage(title: 'Sélection')),
-                      );
+                      ).then((_) => _loadLocations()); // Reload locations after returning
                     },
                   ),
                   IconButton(
@@ -387,7 +393,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildActionButton(Icons.thumb_down, 'Pas intéressé', Colors.red, _handleDislike),
-                    _buildActionButton(Icons.undo, 'Retour', Colors.orange, _handleUndo),
+                    _buildActionButton(Icons.undo, 'Retour', Colors.orange, _actionHistory.isNotEmpty ? _handleUndo : null),
                     _buildActionButton(Icons.thumb_up, 'Intéressé', Colors.green, _handleLike),
                     _buildActionButton(Icons.star, 'Favori', Colors.blue, _handleFavorite),
                   ],
@@ -400,4 +406,3 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
     );
   }
 }
-

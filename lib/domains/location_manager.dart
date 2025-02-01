@@ -3,6 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:swipezone/repositories/models/location.dart';
 import 'package:swipezone/repositories/location_repository_implementation.dart';
+import 'package:flutter/widgets.dart';
+
+
 
 class LocationManager extends ChangeNotifier {
   static final LocationManager _instance = LocationManager._internal();
@@ -79,18 +82,14 @@ class LocationManager extends ChangeNotifier {
 
   Location? undo() {
     if (_history.isNotEmpty) {
-      Location lastLocation = _history.removeLast();
-      if (likedLocations.remove(lastLocation)) {
-        lastLocation.isLiked = false;
-      } else if (dislikedLocations.remove(lastLocation)) {
-        // Do nothing, just remove from disliked
-      } else if (favoriteLocations.remove(lastLocation)) {
-        // Remove from favorites
+      Location lastLocation = _history.last;
+      if (likedLocations.contains(lastLocation)) {
+        undoLike();
+      } else if (dislikedLocations.contains(lastLocation)) {
+        undoDislike();
+      } else if (favoriteLocations.contains(lastLocation)) {
+        undoFavorite();
       }
-      locations.insert(0, lastLocation);
-      currentLocationId = lastLocation.nom;
-      saveState();
-      notifyListeners();
       return lastLocation;
     }
     return null;
@@ -265,5 +264,56 @@ class LocationManager extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void undoLike() {
+    if (_history.isNotEmpty) {
+      Location lastLocation = _history.last;
+      if (likedLocations.remove(lastLocation)) {
+        lastLocation.isLiked = false;
+        locations.insert(0, lastLocation);
+        _history.removeLast();
+        currentLocationId = lastLocation.nom;
+        saveState();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
+    }
+  }
+
+  void undoDislike() {
+    if (_history.isNotEmpty) {
+      Location lastLocation = _history.last;
+      if (dislikedLocations.remove(lastLocation)) {
+        locations.insert(0, lastLocation);
+        _history.removeLast();
+        currentLocationId = lastLocation.nom;
+        saveState();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
+    }
+  }
+
+  void undoFavorite() {
+    if (_history.isNotEmpty) {
+      Location lastLocation = _history.last;
+      if (favoriteLocations.remove(lastLocation)) {
+        if (lastLocation.isLiked) {
+          likedLocations.add(lastLocation);
+        } else {
+          locations.insert(0, lastLocation);
+        }
+        _history.removeLast();
+        currentLocationId = lastLocation.nom;
+        saveState();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
+    }
+  }
+
 }
 
