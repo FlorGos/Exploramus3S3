@@ -60,6 +60,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late MapController _mapController;
   bool _showMarkersList = false;
   bool _isListVisible = true;
+  late Map<String, LatLng> _originalPositions; // Updated type
 
   @override
   void initState() {
@@ -76,6 +77,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
     _controller.forward();
     _mapController = MapController();
+
+    // Initialize _originalPositions
+    _originalPositions = {
+      for (var location in widget.locations)
+        location.nom: LatLng(location.localization.lat!, location.localization.lng!)
+    };
   }
 
   @override
@@ -279,14 +286,27 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     final locationManager = Provider.of<LocationManager>(context, listen: false);
     setState(() {
       for (int i = 0; i < widget.locations.length; i++) {
-        if (i < _initialLocations.length) {
-          // Réinitialiser la position à la position initiale
-          widget.locations[i].localization.lat = _initialLocations[i].localization.lat;
-          widget.locations[i].localization.lng = _initialLocations[i].localization.lng;
-        }
+        Location currentLocation = widget.locations[i];
+        Location? initialLocation = _initialLocations.firstWhere(
+              (loc) => loc.nom == currentLocation.nom,
+          orElse: () => currentLocation,
+        );
+
+        // Réinitialiser la position à la position initiale ou conserver la position actuelle
+        currentLocation.localization.lat = initialLocation.localization.lat;
+        currentLocation.localization.lng = initialLocation.localization.lng;
+
         // Réinitialiser le statut "aimé"
-        widget.locations[i].isLiked = locationManager.likedLocations.any((likedLoc) => likedLoc.nom == widget.locations[i].nom);
+        currentLocation.isLiked = locationManager.likedLocations.any((likedLoc) => likedLoc.nom == currentLocation.nom);
+
+        // Si c'est un nouveau marqueur, l'ajouter à _initialLocations
+        if (initialLocation == currentLocation) {
+          _initialLocations.add(currentLocation.clone());
+        }
       }
+
+      // Supprimer les marqueurs qui n'existent plus
+      _initialLocations.removeWhere((initialLoc) => !widget.locations.any((loc) => loc.nom == initialLoc.nom));
     });
     _updateBasicPolylinePoints();
     _updateRouteForSelectedMode();
@@ -349,6 +369,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   widget.locations.add(newLocation);
                   _isAddingMarker = false;
                 });
+                _updateOriginalPositions(); // Added call to update original positions
+                _addNewMarkerToInitialLocations(newLocation);
                 _updateBasicPolylinePoints();
                 _updateRouteForSelectedMode(); // Ajoutez cette ligne
               },
@@ -359,24 +381,43 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _addNewMarkerToInitialLocations(Location newLocation) {
+    _initialLocations.add(newLocation.clone());
+  }
+
+
   void _updateMarkerPosition(Location location, LatLng newPosition) {
     final locationManager = Provider.of<LocationManager>(context, listen: false);
-    setState(() {
-      location.localization.lat = newPosition.latitude;
-      location.localization.lng = newPosition.longitude;
-      _movingLocation = null;
-    });
-    locationManager.updateLocationPosition(location.nom, newPosition.latitude, newPosition.longitude);
-    _updateLocationAddress(location);
-    _updateBasicPolylinePoints();
+    bool isStatic = locationManager.favoriteLocations.any((favLoc) => favLoc.nom == location.nom) ||
+        locationManager.likedLocations.any((likedLoc) => likedLoc.nom == location.nom);
 
-    if (_selectedMode != null) {
-      _updateRouteForSelectedMode();
+    if (!isStatic) {
+      setState(() {
+        location.localization.lat = newPosition.latitude;
+        location.localization.lng = newPosition.longitude;
+        _movingLocation = null;
+      });
+      _updateLocationAddress(location);
+      _updateBasicPolylinePoints();
+
+      if (_selectedMode != null) {
+        _updateRouteForSelectedMode();
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('This marker cannot be moved')),
+      );
     }
   }
 
   void _updateRouteForSelectedMode() {
-    switch (_selectedMode?.name) {
+    if (_selectedMode == null) {
+      // Si aucun mode n'est sélectionné, mettez simplement à jour les polylines de base
+      _updateBasicPolylinePoints();
+      return;
+    }
+
+    switch (_selectedMode!.name) {
       case 'Walking':
         _fetchOSRMRoute('foot');
         break;
@@ -393,7 +434,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         _fetchTransitRoutes();
         break;
       default:
-      // Ne rien faire si aucun mode n'est sélectionné
+      // Pour tout autre cas, mettez à jour les polylines de base
+        _updateBasicPolylinePoints();
         break;
     }
   }
@@ -452,6 +494,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   widget.locations.remove(location);
+                  _originalPositions.remove(location.nom); // Remove from original positions
                 });
                 Navigator.of(context).pop();
                 _updateBasicPolylinePoints();
@@ -494,6 +537,28 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   void _addNewMarker() {
     _showAddMarkerDialog();
+  }
+
+  void _resetMarkerPositions() {
+    setState(() {
+      for (var location in widget.locations) {
+        final originalPosition = _originalPositions[location.nom];
+        if (originalPosition != null) {
+          location.localization.lat = originalPosition.latitude;
+          location.localization.lng = originalPosition.longitude;
+        }
+      }
+    });
+    _updateBasicPolylinePoints();
+    _updateRouteForSelectedMode();
+  }
+
+  void _updateOriginalPositions() {
+    for (var location in widget.locations) {
+      if (!_originalPositions.containsKey(location.nom)) {
+        _originalPositions[location.nom] = LatLng(location.localization.lat!, location.localization.lng!);
+      }
+    }
   }
 
   Widget _buildMarkersList() {
@@ -551,6 +616,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       appBar: AppBar(
         title: const Text('Route Map'),
         backgroundColor: Theme.of(context).primaryColor,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.restore),
+            onPressed: _resetMarkerPositions,
+            tooltip: 'Reset marker positions',
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -760,16 +832,30 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _startMovingMarker(Location location) {
-    setState(() {
-      _movingLocation = location;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tap on the map to move the marker'),
-        duration: Duration(seconds: 2),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-    );
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
+    bool isStatic = locationManager.favoriteLocations.any((favLoc) => favLoc.nom == location.nom) ||
+        locationManager.likedLocations.any((likedLoc) => likedLoc.nom == location.nom);
+
+    if (!isStatic) {
+      setState(() {
+        _movingLocation = location;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tap on the map to move the marker'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('This marker cannot be moved'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+      );
+    }
   }
 }
 

@@ -37,9 +37,11 @@ class _PlanningPageState extends State<PlanningPage> {
       selectedLikedLocations = widget.selectedLocations
           .where((location) => locationManager.likedLocations.contains(location) &&
           !locationManager.favoriteLocations.contains(location))
+          .map((location) => location.clone())
           .toList();
       selectedFavoriteLocations = widget.selectedLocations
           .where((location) => locationManager.favoriteLocations.contains(location))
+          .map((location) => location.clone())
           .toList();
     });
   }
@@ -71,7 +73,7 @@ class _PlanningPageState extends State<PlanningPage> {
           onPressed: () async {
             try {
               Position userPosition = await Geolocator.getCurrentPosition();
-              Navigator.of(context).push(
+              final updatedLocations = await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => MapScreen(
                     userPosition: LatLng(userPosition.latitude, userPosition.longitude),
@@ -79,6 +81,13 @@ class _PlanningPageState extends State<PlanningPage> {
                   ),
                 ),
               );
+              if (updatedLocations != null) {
+                setState(() {
+                  widget.selectedLocations.clear();
+                  widget.selectedLocations.addAll(updatedLocations);
+                  _separateSelectedLocations();
+                });
+              }
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text('Impossible d\'obtenir la localisation. Veuillez activer les services de localisation.'),
