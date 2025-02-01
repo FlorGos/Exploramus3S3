@@ -256,5 +256,14 @@ class LocationManager extends ChangeNotifier {
     await saveState();
     notifyListeners();
   }
+
+  void updateLocationPosition(String locationName, double lat, double lng) {
+    final index = locations.indexWhere((loc) => loc.nom == locationName);
+    if (index != -1) {
+      locations[index].localization.lat = lat;
+      locations[index].localization.lng = lng;
+      notifyListeners();
+    }
+  }
 }
 

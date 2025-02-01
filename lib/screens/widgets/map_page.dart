@@ -105,6 +105,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Future<void> _fetchOSRMRoute(String profile) async {
     setState(() {
       _isLoadingRoute = true;
+      _currentProfile = profile;  // Ajoutez cette ligne
     });
 
     final sortedLocations = _sortLocationsByDistance();
@@ -202,6 +203,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         _isOSRMRouteVisible = false;
         _showNavigationInstructions = false;
         _showTransitInfo = false;
+        _currentProfile = '';  // Ajoutez cette ligne
       });
       return;
     }
@@ -274,11 +276,20 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _resetMarkerColors() {
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
     setState(() {
-      widget.locations.clear();
-      widget.locations.addAll(_initialLocations.map((loc) => loc.clone()));
+      for (int i = 0; i < widget.locations.length; i++) {
+        if (i < _initialLocations.length) {
+          // Réinitialiser la position à la position initiale
+          widget.locations[i].localization.lat = _initialLocations[i].localization.lat;
+          widget.locations[i].localization.lng = _initialLocations[i].localization.lng;
+        }
+        // Réinitialiser le statut "aimé"
+        widget.locations[i].isLiked = locationManager.likedLocations.any((likedLoc) => likedLoc.nom == widget.locations[i].nom);
+      }
     });
     _updateBasicPolylinePoints();
+    _updateRouteForSelectedMode();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Marqueurs réinitialisés'), backgroundColor: Theme.of(context).primaryColor),
     );
@@ -286,9 +297,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   Color _getMarkerColor(Location location) {
     final locationManager = Provider.of<LocationManager>(context, listen: false);
-    if (locationManager.favoriteLocations.contains(location)) {
+    if (locationManager.favoriteLocations.any((favLoc) => favLoc.nom == location.nom)) {
       return Colors.yellow;
-    } else if (locationManager.likedLocations.contains(location)) {
+    } else if (location.isLiked || locationManager.likedLocations.any((likedLoc) => likedLoc.nom == location.nom)) {
       return Colors.red;
     }
     return Theme.of(context).primaryColor; // Couleur par défaut pour les autres marqueurs
@@ -339,6 +350,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   _isAddingMarker = false;
                 });
                 _updateBasicPolylinePoints();
+                _updateRouteForSelectedMode(); // Ajoutez cette ligne
               },
             ),
           ],
@@ -348,14 +360,44 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _updateMarkerPosition(Location location, LatLng newPosition) {
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
     setState(() {
       location.localization.lat = newPosition.latitude;
       location.localization.lng = newPosition.longitude;
       _movingLocation = null;
     });
+    locationManager.updateLocationPosition(location.nom, newPosition.latitude, newPosition.longitude);
     _updateLocationAddress(location);
     _updateBasicPolylinePoints();
+
+    if (_selectedMode != null) {
+      _updateRouteForSelectedMode();
+    }
   }
+
+  void _updateRouteForSelectedMode() {
+    switch (_selectedMode?.name) {
+      case 'Walking':
+        _fetchOSRMRoute('foot');
+        break;
+      case 'Cycling':
+        _fetchOSRMRoute('bike');
+        break;
+      case 'Driving':
+        _fetchOSRMRoute('car');
+        break;
+      case 'Transit':
+      case 'Metro':
+      case 'RER':
+      case 'Bus':
+        _fetchTransitRoutes();
+        break;
+      default:
+      // Ne rien faire si aucun mode n'est sélectionné
+        break;
+    }
+  }
+
 
   Future<void> _updateLocationAddress(Location location) async {
     final address = await _getStreetNameFromCoordinates(location.localization.lat!, location.localization.lng!);
@@ -413,6 +455,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 });
                 Navigator.of(context).pop();
                 _updateBasicPolylinePoints();
+                _updateRouteForSelectedMode();  // Ajoutez cette ligne
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Location deleted')),
                 );
@@ -604,15 +647,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     onPressed: () {
                       _mapController.move(widget.userPosition, 13.0);
                     },
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
-                    elevation: 4,
-                    mini: true,
-                  ),
-                  SizedBox(height: 8),
-                  FloatingActionButton(
-                    heroTag: "resetColors",
-                    child: Icon(Icons.color_lens, size: 20, color: Colors.white),
-                    onPressed: _resetMarkerColors,
                     backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
                     elevation: 4,
                     mini: true,
