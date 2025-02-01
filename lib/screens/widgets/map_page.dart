@@ -21,6 +21,7 @@ import 'package:swipezone/screens/widgets/add_marker_dialog.dart';
 import 'package:swipezone/services/geocoding_service.dart';
 import 'package:swipezone/services/ratp_api_service.dart';
 import 'package:swipezone/services/prim_api_service.dart';
+import 'package:swipezone/screens/compass_page.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -618,9 +619,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
           IconButton(
-            icon: Icon(Icons.restore),
-            onPressed: _resetMarkerPositions,
-            tooltip: 'Reset marker positions',
+            icon: Icon(Icons.explore),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CompassPage()),
+              );
+            },
+            tooltip: 'Open Compass',
           ),
         ],
       ),
@@ -723,6 +729,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     elevation: 4,
                     mini: true,
                   ),
+
                 ],
               ],
             ),
