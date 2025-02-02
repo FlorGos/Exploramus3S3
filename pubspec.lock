@@ -26,10 +26,10 @@ packages:
     dependency: "direct main"
     description:
       name: app_settings
-      sha256: "09bc7fe0313a507087bec1a3baf555f0576e816a760cbb31813a88890a09d9e5"
+      sha256: "476df1d85cec143c3d27dd1c7451629a59c0c5ccf70a0adcbfa92a0a2d928705"
       url: "https://pub.dev"
     source: hosted
-    version: "5.1.1"
+    version: "5.2.0"
   archive:
     dependency: transitive
     description:
@@ -335,10 +335,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_foreground_task
-      sha256: "5eb81adfd98c77f4d4803ae80d7e0573fd35f706fce6aaa7376656a15ba2d1e0"
+      sha256: "206017ee1bf864f34b8d7bce664a172717caa21af8da23f55866470dfe316644"
       url: "https://pub.dev"
     source: hosted
-    version: "3.10.0"
+    version: "8.17.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -1057,18 +1057,18 @@ packages:
     dependency: "direct main"
     description:
       name: sensors_plus
-      sha256: "3ec8b74d73d72a54baa328beb6fa33df80963f3e5491fc6e714b98b935b65dd9"
+      sha256: "905282c917c6bb731c242f928665c2ea15445aa491249dea9d98d7c79dc8fd39"
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.5"
+    version: "6.1.1"
   sensors_plus_platform_interface:
     dependency: transitive
     description:
       name: sensors_plus_platform_interface
-      sha256: bc472d6cfd622acb4f020e726433ee31788b038056691ba433fec80e448a094f
+      sha256: "58815d2f5e46c0c41c40fb39375d3f127306f7742efe3b891c0b1c87e2b5cd5d"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.0"
+    version: "2.0.1"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -1093,14 +1093,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.5.4"
-  shared_preferences_ios:
-    dependency: transitive
-    description:
-      name: shared_preferences_ios
-      sha256: "585a14cefec7da8c9c2fb8cd283a3bb726b4155c0952afe6a0caaa7b2272de34"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.1"
   shared_preferences_linux:
     dependency: transitive
     description:
