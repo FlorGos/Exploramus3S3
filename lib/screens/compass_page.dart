@@ -54,30 +54,45 @@ class _CompassPageState extends State<CompassPage> with TickerProviderStateMixin
   }
 
   Widget _buildCompass() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            "${_direction.toStringAsFixed(0)}°",
-            style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 50),
-          AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return Transform.rotate(
-                angle: -(_direction * (math.pi / 180)),
-                child: Image.asset(
-                  'lib/assets/images/compass_needle.png',
-                  width: 200,
-                  height: 200,
+    return OrientationBuilder(
+      builder: (context, orientation) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            double availableHeight = constraints.maxHeight;
+            double availableWidth = constraints.maxWidth;
+            double compassSize = math.min(availableWidth, availableHeight) * 0.7;
+
+            return SingleChildScrollView(
+              child: Container(
+                height: availableHeight,
+                width: availableWidth,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "${_direction.toStringAsFixed(0)}°",
+                      style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 20),
+                    AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: -(_direction * (math.pi / 180)),
+                          child: CustomPaint(
+                            size: Size(compassSize, compassSize),
+                            painter: CompassPainter(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-              );
-            },
-          ),
-        ],
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -105,5 +120,61 @@ class _CompassPageState extends State<CompassPage> with TickerProviderStateMixin
       ),
     );
   }
+}
+
+class CompassPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2;
+
+    // Draw the outer circle
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, radius, paint);
+
+    // Draw the inner circle
+    canvas.drawCircle(center, radius * 0.8, paint);
+
+    // Draw the cardinal directions
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    final directions = ['N', 'E', 'S', 'W'];
+    for (int i = 0; i < 4; i++) {
+      textPainter.text = TextSpan(
+        text: directions[i],
+        style: TextStyle(color: Colors.white, fontSize: radius * 0.15),
+      );
+      textPainter.layout();
+      final angle = i * (math.pi / 2);
+      final x = center.dx + (radius * 0.9) * math.sin(angle) - textPainter.width / 2;
+      final y = center.dy - (radius * 0.9) * math.cos(angle) - textPainter.height / 2;
+      textPainter.paint(canvas, Offset(x, y));
+    }
+
+    // Draw the compass needle
+    final needlePaint = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(center.dx, center.dy - radius * 0.7)
+      ..lineTo(center.dx - radius * 0.05, center.dy)
+      ..lineTo(center.dx + radius * 0.05, center.dy)
+      ..close();
+    canvas.drawPath(path, needlePaint);
+
+    // Draw the south part of the needle
+    needlePaint.color = Colors.white;
+    final southPath = Path()
+      ..moveTo(center.dx, center.dy + radius * 0.7)
+      ..lineTo(center.dx - radius * 0.05, center.dy)
+      ..lineTo(center.dx + radius * 0.05, center.dy)
+      ..close();
+    canvas.drawPath(southPath, needlePaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 

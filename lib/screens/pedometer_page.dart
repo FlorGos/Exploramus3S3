@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class PedometerPage extends StatefulWidget {
   const PedometerPage({Key? key}) : super(key: key);
@@ -30,17 +31,66 @@ class _PedometerPageState extends State<PedometerPage> {
   late Stream<StepCount> _stepCountStream;
   Database? _database;
   bool _isLoading = true;
+  String _currentDate = ''; // Added
 
   void _onReceiveData(Object data) {
+    print('Données reçues du service en arrière-plan : $data');
     if (data is int && mounted) {
+      final now = DateTime.now();
+      final today = DateFormat('yyyy-MM-dd').format(now);
+
+      if (today != _currentDate) {
+        // Nouveau jour, réinitialiser le compteur
+        _dailySteps = 0;
+        _currentDate = today;
+      }
+
       setState(() {
-        _dailySteps = data;
+        _dailySteps += data; // Ajouter les nouveaux pas au total du jour
         _distanceKm = _dailySteps * 0.0007;
         _caloriesBurned = (_dailySteps * 0.04).round();
         _activityTime = Duration(minutes: (_dailySteps * 0.01).round());
       });
       _saveStepData();
+      _updateWeeklySteps();
+      _updateMonthlySteps();
     }
+  }
+
+  Future<void> _updateWeeklySteps() async {
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final List<int> newWeeklySteps = List.filled(7, 0);
+
+    for (int i = 0; i < 7; i++) {
+      final date = weekStart.add(Duration(days: i));
+      if (date.isAfter(now)) {
+        break; // Ne pas inclure les jours futurs
+      }
+      newWeeklySteps[i] = await _getStepsForDate(date);
+    }
+
+    setState(() {
+      _weeklySteps = newWeeklySteps;
+    });
+  }
+
+  Future<void> _updateMonthlySteps() async {
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    final List<int> newMonthlySteps = List.filled(30, 0);
+
+    for (int i = 0; i < 30; i++) {
+      final date = monthStart.add(Duration(days: i));
+      if (date.isAfter(now)) {
+        break; // Ne pas inclure les jours futurs
+      }
+      newMonthlySteps[i] = await _getStepsForDate(date);
+    }
+
+    setState(() {
+      _monthlySteps = newMonthlySteps;
+    });
   }
 
   Future<void> _requestPermissions() async {
@@ -52,6 +102,16 @@ class _PedometerPageState extends State<PedometerPage> {
     if (Platform.isAndroid) {
       if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
         await FlutterForegroundTask.requestIgnoreBatteryOptimization();
+      }
+    }
+  }
+
+  Future<void> _requestActivityRecognitionPermission() async {
+    if (Platform.isAndroid) {
+      if (await Permission.activityRecognition.request().isGranted) {
+        print('Permission d\'activité accordée');
+      } else {
+        print('Permission d\'activité refusée');
       }
     }
   }
@@ -76,8 +136,6 @@ class _PedometerPageState extends State<PedometerPage> {
     }
   }
 
-
-
   void _initForegroundTask() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
@@ -95,17 +153,13 @@ class _PedometerPageState extends State<PedometerPage> {
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: ForegroundTaskEventAction.nothing(),  // Utilisation du constructeur factory nothing()
+        eventAction: ForegroundTaskEventAction.nothing(),
         autoRunOnBoot: true,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
   }
-
-
-
-
 
   Future<void> _startForegroundTask() async {
     if (await FlutterForegroundTask.isRunningService) {
@@ -132,6 +186,8 @@ class _PedometerPageState extends State<PedometerPage> {
       _activityTime = Duration(minutes: (_dailySteps * 0.01).round());
     });
     _saveStepData();
+    _updateWeeklySteps();
+    _updateMonthlySteps();
   }
 
   Future<void> _initDatabase() async {
@@ -514,11 +570,13 @@ class _PedometerPageState extends State<PedometerPage> {
   @override
   void initState() {
     super.initState();
+    _currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now()); // Added
     FlutterForegroundTask.addTaskDataCallback(_onReceiveData);
     _initializeApp();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
+      await _requestActivityRecognitionPermission();
       _initForegroundTask();
       await _startForegroundTask();
     });
@@ -544,14 +602,17 @@ class PedometerTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    print('Service en arrière-plan démarré');
     _stepCountSubscription = Pedometer.stepCountStream.listen((StepCount event) {
+      print('Pas détectés : ${event.steps}');
       _steps = event.steps;
       FlutterForegroundTask.updateService(
         notificationTitle: 'Podomètre en cours d\'exécution',
         notificationText: '$_steps pas',
       );
-      // Send step count to main isolate
       FlutterForegroundTask.sendDataToMain(_steps);
+    }, onError: (error) {
+      print('Erreur du podomètre : $error');
     });
   }
 
