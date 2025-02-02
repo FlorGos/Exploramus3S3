@@ -272,7 +272,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     final List<LatLng> waypoints = [widget.userPosition, ...sortedLocations.map((loc) => LatLng(loc.localization.lat!, loc.localization.lng!))];
 
     String coordinates = waypoints.map((point) => '${point.longitude},${point.latitude}').join(';');
-    final url = Uri.parse('http://router.project-osrm.org/route/v1/$profile/$coordinates?overview=full&geometries=geojson&steps=true&annotations=true');
+    final url = Uri.parse('https://router.project-osrm.org/route/v1/$profile/$coordinates?overview=full&geometries=geojson&steps=true&annotations=true');
 
     try {
       final response = await http.get(url);
