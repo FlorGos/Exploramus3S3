@@ -22,6 +22,11 @@ import 'package:swipezone/services/geocoding_service.dart';
 import 'package:swipezone/services/ratp_api_service.dart';
 import 'package:swipezone/services/prim_api_service.dart';
 import 'package:swipezone/screens/compass_page.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:screenshot/screenshot.dart';
+
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -85,6 +90,40 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         location.nom: LatLng(location.localization.lat!, location.localization.lng!)
     };
   }
+
+  Future<void> _generateAndDownloadPdf() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Route Details', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 20),
+              pw.Text('Total Distance: ${_totalDistance.toStringAsFixed(2)} km'),
+              pw.Text('Total Duration: ${(_totalDuration / 60).toStringAsFixed(2)} minutes'),
+              pw.SizedBox(height: 20),
+              pw.Text('Steps:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.ListView.builder(
+                itemCount: _navigationSteps.length,
+                itemBuilder: (context, index) {
+                  final step = _navigationSteps[index];
+                  return pw.Text('${index + 1}. ${step.instruction}');
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
+
 
   @override
   void dispose() {
@@ -725,6 +764,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     onPressed: () {
                       _mapController.move(widget.userPosition, 13.0);
                     },
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                    elevation: 4,
+                    mini: true,
+                  ),
+
+                  SizedBox(height: 8),
+                  FloatingActionButton(
+                    heroTag: "downloadPdf",
+                    child: Icon(Icons.download, size: 20, color: Colors.white),
+                    onPressed: _generateAndDownloadPdf,
                     backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
                     elevation: 4,
                     mini: true,
