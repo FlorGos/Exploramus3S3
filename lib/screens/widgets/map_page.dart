@@ -26,7 +26,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:screenshot/screenshot.dart';
-
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -67,6 +68,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _showMarkersList = false;
   bool _isListVisible = true;
   late Map<String, LatLng> _originalPositions; // Updated type
+  final ScreenshotController screenshotController = ScreenshotController();
 
   @override
   void initState() {
@@ -94,27 +96,111 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Future<void> _generateAndDownloadPdf() async {
     final pdf = pw.Document();
 
+    // Capture map screenshot
+    Uint8List? mapImageBytes;
+    try {
+      mapImageBytes = await screenshotController.capture();
+    } catch (e) {
+      print('Failed to capture screenshot: $e');
+    }
+
+    // Load all location images before creating PDF
+    List<LocationWithImage> locationsWithImages = await Future.wait(
+      widget.locations.map((location) async {
+        Uint8List? imageBytes;
+        try {
+          if (location.imagePath != null && location.imagePath != "null") {
+            ByteData data = await rootBundle.load(location.imagePath!);
+            imageBytes = data.buffer.asUint8List();
+          }
+        } catch (e) {
+          print('Failed to load image for ${location.nom}: $e');
+          try {
+            ByteData placeholderData = await rootBundle.load('assets/placeholder.png');
+            imageBytes = placeholderData.buffer.asUint8List();
+          } catch (e) {
+            print('Failed to load placeholder image: $e');
+          }
+        }
+        return LocationWithImage(location: location, imageBytes: imageBytes);
+      }),
+    );
+
+    // Get distance and duration
+    double totalDistance = _getTotalDistance();
+    int totalDurationMinutes = (_totalDuration / 60).round();
+
+    // First page with map and general information
     pdf.addPage(
       pw.Page(
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Route Details', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 20),
-              pw.Text('Total Distance: ${_totalDistance.toStringAsFixed(2)} km'),
-              pw.Text('Total Duration: ${(_totalDuration / 60).toStringAsFixed(2)} minutes'),
-              pw.SizedBox(height: 20),
-              pw.Text('Steps:', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-              pw.ListView.builder(
-                itemCount: _navigationSteps.length,
-                itemBuilder: (context, index) {
-                  final step = _navigationSteps[index];
-                  return pw.Text('${index + 1}. ${step.instruction}');
-                },
+              pw.Text('Détails de l\'itinéraire',
+                  style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)
               ),
+              pw.SizedBox(height: 20),
+              if (mapImageBytes != null)
+                pw.Image(pw.MemoryImage(mapImageBytes)),
+              pw.SizedBox(height: 20),
+              pw.Text('Distance totale: ${totalDistance.toStringAsFixed(2)} km'),
+              if (_currentProfile == 'foot' || _currentProfile == 'bike' || _currentProfile == 'car')
+                pw.Text('Durée (${_currentProfile}): $totalDurationMinutes minutes')
+              else
+                pw.Text('Durée: Non calculée (sélectionnez un mode de transport terrestre)'),
+              pw.SizedBox(height: 20),
+              pw.Text('Mode de transport: ${_selectedMode?.name ?? "Non spécifié"}'),
             ],
           );
+        },
+      ),
+    );
+
+    // Locations pages
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text('Lieux visités',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)
+              ),
+            ),
+            ...locationsWithImages.map((locationWithImage) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(locationWithImage.location.nom,
+                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)
+                ),
+                pw.Text('Adresse: ${locationWithImage.location.localization.adress ?? "Non spécifiée"}'),
+                pw.Text('Description: ${locationWithImage.location.description ?? "Aucune description"}'),
+                if (locationWithImage.hasValidImage)
+                  pw.Image(pw.MemoryImage(locationWithImage.imageBytes!)),
+                pw.SizedBox(height: 10),
+              ],
+            )).toList(),
+          ];
+        },
+      ),
+    );
+
+    // Navigation steps pages
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text('Étapes',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)
+              ),
+            ),
+            ...(_navigationSteps.map((step) => pw.Paragraph(text: '- ${step.instruction}')).toList()),
+          ];
         },
       ),
     );
@@ -122,6 +208,33 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
     );
+  }
+
+  Future<Uint8List> _getImageBytes(String? imagePath) async {
+    if (imagePath == null || imagePath == "null") {
+      // Return a placeholder image from assets folder
+      try {
+        return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
+      } catch (e) {
+        print('Failed to load placeholder image: $e');
+        // Return an empty image if even the placeholder fails
+        return Uint8List(0);
+      }
+    }
+    try {
+      // Load the location image
+      return await rootBundle.load(imagePath).then((data) => data.buffer.asUint8List());
+    } catch (e) {
+      print('Failed to load image: $e');
+      // Try to return placeholder on failure
+      try {
+        return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
+      } catch (e) {
+        print('Failed to load placeholder image: $e');
+        // Return an empty image if everything fails
+        return Uint8List(0);
+      }
+    }
   }
 
 
@@ -671,72 +784,75 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
       body: Stack(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              center: widget.userPosition,
-              zoom: 13.0,
-              onTap: _handleMapTap,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                subdomains: const ['a', 'b', 'c'],
+          Screenshot(
+            controller: screenshotController,
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                center: widget.userPosition,
+                zoom: 13.0,
+                onTap: _handleMapTap,
               ),
-              PolylineLayer(
-                polylines: [
-                  if (_isOSRMRouteVisible)
-                    Polyline(
-                      points: _osrmRoutePoints,
-                      color: _getRouteColor(_currentProfile),
-                      strokeWidth: 4.0,
-                    )
-                  else
-                    Polyline(
-                      points: _basicPolylinePoints,
-                      color: Theme.of(context).primaryColor,
-                      strokeWidth: 4.0,
-                    ),
-                ],
-              ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    width: 80.0,
-                    height: 80.0,
-                    point: widget.userPosition,
-                    builder: (ctx) => const Icon(
-                      Icons.my_location,
-                      color: Colors.blue,
-                      size: 40.0,
-                    ),
-                  ),
-                  ...widget.locations.map((location) {
-                    return Marker(
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
+                ),
+                PolylineLayer(
+                  polylines: [
+                    if (_isOSRMRouteVisible)
+                      Polyline(
+                        points: _osrmRoutePoints,
+                        color: _getRouteColor(_currentProfile),
+                        strokeWidth: 4.0,
+                      )
+                    else
+                      Polyline(
+                        points: _basicPolylinePoints,
+                        color: Theme.of(context).primaryColor,
+                        strokeWidth: 4.0,
+                      ),
+                  ],
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
                       width: 80.0,
                       height: 80.0,
-                      point: LatLng(location.localization.lat!, location.localization.lng!),
-                      builder: (ctx) => GestureDetector(
-                        onTap: () {
-                          _showLocationDetailModal(location);
-                        },
-                        onLongPress: () {
-                          _startMovingMarker(location);
-                        },
-                        child: AnimatedContainer(
-                          duration: Duration(milliseconds: 300),
-                          child: Icon(
-                            Icons.location_on,
-                            color: _movingLocation == location ? Colors.green : _getMarkerColor(location),
-                            size: _movingLocation == location ? 50.0 : 40.0,
+                      point: widget.userPosition,
+                      builder: (ctx) => const Icon(
+                        Icons.my_location,
+                        color: Colors.blue,
+                        size: 40.0,
+                      ),
+                    ),
+                    ...widget.locations.map((location) {
+                      return Marker(
+                        width: 80.0,
+                        height: 80.0,
+                        point: LatLng(location.localization.lat!, location.localization.lng!),
+                        builder: (ctx) => GestureDetector(
+                          onTap: () {
+                            _showLocationDetailModal(location);
+                          },
+                          onLongPress: () {
+                            _startMovingMarker(location);
+                          },
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 300),
+                            child: Icon(
+                              Icons.location_on,
+                              color: _movingLocation == location ? Colors.green : _getMarkerColor(location),
+                              size: _movingLocation == location ? 50.0 : 40.0,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
-            ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ],
+            ),
           ),
           _buildMarkersList(),
           Positioned(
@@ -846,7 +962,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               bottom: 100,
               child: TransitInfoPanel(
                 routes: _transitRoutes,
-                onClose: () => setState(() => _showTransitInfo = false),
+                onClose: () => setState(() =>_showTransitInfo = false),
               ),
             ),
         ],
@@ -913,5 +1029,17 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       );
     }
   }
+}
+
+class LocationWithImage {
+  final Location location;
+  final Uint8List? imageBytes;
+
+  LocationWithImage({
+    required this.location,
+    this.imageBytes,
+  });
+
+  bool get hasValidImage => imageBytes != null && imageBytes!.isNotEmpty;
 }
 
