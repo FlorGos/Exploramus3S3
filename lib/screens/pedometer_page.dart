@@ -5,6 +5,9 @@ import 'package:pedometer/pedometer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter_background/flutter_background.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'dart:isolate';
 
 class PedometerPage extends StatefulWidget {
   @override
@@ -29,7 +32,7 @@ class _PedometerPageState extends State<PedometerPage> {
   void initState() {
     super.initState();
     _initializeApp();
-    initPlatformState();
+    _initForegroundTask();
   }
 
   Future<void> _initializeApp() async {
@@ -51,24 +54,41 @@ class _PedometerPageState extends State<PedometerPage> {
     }
   }
 
-  void initPlatformState() {
-    _stepCountStream = Pedometer.stepCountStream;
-    _stepCountStream.listen(_onStepCount).onError(_onStepCountError);
+  void _initForegroundTask() {
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'pedometer_notification_channel',
+        channelName: 'Pedometer Notification',
+        channelDescription: 'This notification appears when the pedometer is running.',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+        iconData: const NotificationIconData(
+          resType: ResourceType.mipmap,
+          resPrefix: ResourcePrefix.ic,
+          name: 'launcher',
+        ),
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: true,
+        playSound: false,
+      ),
+      foregroundTaskOptions: const ForegroundTaskOptions(
+        interval: 5000,
+        isOnceEvent: false,
+        autoRunOnBoot: true,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+    _startForegroundTask();
   }
 
-  void _onStepCount(StepCount event) {
-    if (mounted) {
-      setState(() {
-        _dailySteps = event.steps;
-        _distanceKm = _dailySteps * 0.0007;
-        _caloriesBurned = (_dailySteps * 0.04).round();
-      });
-      _saveStepData();
-    }
-  }
-
-  void _onStepCountError(error) {
-    print('Pedometer error: $error');
+  Future<void> _startForegroundTask() async {
+    await FlutterForegroundTask.startService(
+      notificationTitle: "Podomètre en cours d'exécution",
+      notificationText: "Comptage des pas en arrière-plan",
+      callback: startCallback,
+    );
   }
 
   Future<void> _initDatabase() async {
@@ -83,17 +103,6 @@ class _PedometerPageState extends State<PedometerPage> {
           'CREATE TABLE steps(date TEXT PRIMARY KEY, count INTEGER)',
         );
       },
-    );
-  }
-
-  Future<void> _saveStepData() async {
-    if (_database == null) return;
-
-    final String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    await _database!.insert(
-      'steps',
-      {'date': today, 'count': _dailySteps},
-      conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
@@ -144,6 +153,26 @@ class _PedometerPageState extends State<PedometerPage> {
     }
 
     return 0;
+  }
+
+  Future<void> _saveStepData() async {
+    if (_database == null) return;
+
+    final String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    await _database!.insert(
+      'steps',
+      {'date': today, 'count': _dailySteps},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  void _updateStepCount(int steps) {
+    setState(() {
+      _dailySteps = steps;
+      _distanceKm = _dailySteps * 0.0007;
+      _caloriesBurned = (_dailySteps * 0.04).round();
+    });
+    _saveStepData();
   }
 
   @override
@@ -452,8 +481,57 @@ class _PedometerPageState extends State<PedometerPage> {
 
   @override
   void dispose() {
+    FlutterForegroundTask.stopService();
     _database?.close();
     super.dispose();
+  }
+}
+
+@pragma('vm:entry-point')
+void startCallback() {
+  FlutterForegroundTask.setTaskHandler(PedometerTaskHandler());
+}
+
+class PedometerTaskHandler extends TaskHandler {
+  int _steps = 0;
+  late Stream<StepCount> _stepCountStream;
+
+  @override
+  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
+    _stepCountStream = Pedometer.stepCountStream;
+    _stepCountStream.listen(_onStepCount);
+  }
+
+  void _onStepCount(StepCount event) {
+    _steps = event.steps;
+    FlutterForegroundTask.updateService(
+      notificationTitle: 'Podomètre en cours d\'exécution',
+      notificationText: '$_steps pas comptés',
+    );
+  }
+
+  @override
+  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
+    FlutterForegroundTask.updateService(
+      notificationTitle: 'Podomètre en cours d\'exécution',
+      notificationText: '$_steps pas comptés',
+    );
+    sendPort?.send(_steps);
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
+    await FlutterForegroundTask.clearAllData();
+  }
+
+  @override
+  void onButtonPressed(String id) {
+    // Gérer les actions des boutons de notification si nécessaire
+  }
+
+  @override
+  void onNotificationPressed() {
+    // Gérer l'action lorsque la notification est pressée
   }
 }
 
