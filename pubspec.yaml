@@ -62,6 +62,8 @@ dependencies:
   flutter_nfc_kit: ^3.5.2 # Vérifiez la dernière version disponible
   shared_preferences: 2.2.2
   share_plus: 10.1.4
+  flutter_email_sender: 6.0.3
+  url_launcher: ^6.1.14
   provider: ^6.1.2
 dev_dependencies:
   flutter_test:

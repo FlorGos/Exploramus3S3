@@ -756,6 +756,14 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _shareRoute() {
+    // Implement sharing functionality here
+    // For now, we'll just show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Sharing functionality to be implemented')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -882,6 +890,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     heroTag: "downloadPdf",
                     child: Icon(Icons.download, size: 20, color: Colors.white),
                     onPressed: _generateAndDownloadPdf,
+                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
+                    elevation: 4,
+                    mini: true,
+                  ),
+                  SizedBox(height: 8),
+                  FloatingActionButton(
+                    heroTag: "shareRoute",
+                    child: Icon(Icons.share, size: 20, color: Colors.white),
+                    onPressed: _shareRoute,
                     backgroundColor: Theme.of(context).primaryColor.withOpacity(0.8),
                     elevation: 4,
                     mini: true,
