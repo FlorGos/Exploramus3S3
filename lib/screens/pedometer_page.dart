@@ -144,6 +144,9 @@ class _PedometerPageState extends State<PedometerPage> {
       _distanceKm = _dailySteps * 0.0007;
       _caloriesBurned = (_dailySteps * 0.04).round();
       _activityTime = Duration(minutes: (_dailySteps * 0.01).round());
+
+      // Mise à jour des données hebdomadaires et mensuelles
+      _updateWeeklyAndMonthlyData();
     });
     _saveStepData();
   }
