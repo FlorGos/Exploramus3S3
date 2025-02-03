@@ -34,6 +34,8 @@ import 'dart:io' show Platform;
 import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
+
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -363,53 +365,54 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _onTransportModeSelected(TransportMode mode) async {
-    if (_selectedMode == mode && _isOSRMRouteVisible) {
-      setState(() {
-        _isOSRMRouteVisible = false;
-        _showNavigationInstructions = false;
-        _showTransitInfo = false;
-        _currentProfile = '';
-      });
-      return;
-    }
-
     setState(() {
       _selectedMode = mode;
-      _isLoadingRoute = true;
     });
 
-    String profile;
-    switch (mode.name) {
-      case 'Walking':
-        profile = 'foot';
-        _showTransitInfo = false;
-        await _fetchOSRMRoute(profile);
-        break;
-      case 'Cycling':
-        profile = 'bike';
-        _showTransitInfo = false;
-        await _fetchOSRMRoute(profile);
-        break;
-      case 'Driving':
-        profile = 'car';
-        _showTransitInfo = false;
-        await _fetchOSRMRoute(profile);
-        break;
-      case 'Transit':
-      case 'Metro':
-      case 'RER':
-      case 'Bus':
-        await _fetchTransitRoutes();
-        break;
-      default:
-        _showTransitInfo = false;
-        _isOSRMRouteVisible = false;
-        _showNavigationInstructions = false;
+    if (mode.name == 'Public Transport') {
+      final url = _generateGoogleMapsUrl();
+      if (await canLaunch(url)) {
+        await launch(url);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open Google Maps')),
+        );
+      }
+    } else {
+      setState(() {
+        _isLoadingRoute = true;
+      });
+
+      String profile;
+      switch (mode.name) {
+        case 'Walking':
+          profile = 'foot';
+          _showTransitInfo = false;
+          await _fetchOSRMRoute(profile);
+          break;
+        case 'Cycling':
+          profile = 'bike';
+          _showTransitInfo = false;
+          await _fetchOSRMRoute(profile);
+          break;
+        case 'Driving':
+          profile = 'car';
+          _showTransitInfo = false;
+          await _fetchOSRMRoute(profile);
+          break;
+        case 'Public Transport':
+          await _fetchTransitRoutes();
+          break;
+        default:
+          _showTransitInfo = false;
+          _isOSRMRouteVisible = false;
+          _showNavigationInstructions = false;
+      }
+
+      setState(() {
+        _isLoadingRoute = false;
+      });
     }
-
-    setState(() {
-      _isLoadingRoute = false;
-    });
   }
 
   List<Location> _sortLocationsByDistance() {
@@ -579,10 +582,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       case 'Driving':
         _fetchOSRMRoute('car');
         break;
-      case 'Transit':
-      case 'Metro':
-      case 'RER':
-      case 'Bus':
+      case 'Public Transport':
         _fetchTransitRoutes();
         break;
       default:
@@ -887,6 +887,47 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     return pdf;
   }
 
+  String _generateGoogleMapsUrl() {
+    final sortedLocations = _sortLocationsByDistance();
+    final origin = '${widget.userPosition.latitude},${widget.userPosition.longitude}';
+    final destination = sortedLocations.isNotEmpty
+        ? '${sortedLocations.last.localization.lat},${sortedLocations.last.localization.lng}'
+        : origin;
+
+    List<String> waypoints = [];
+    if (sortedLocations.length > 1) {
+      waypoints = sortedLocations.sublist(0, sortedLocations.length - 1).map((loc) =>
+      '${loc.localization.lat},${loc.localization.lng}'
+      ).toList();
+    }
+
+    final waypointsString = waypoints.isNotEmpty ? '&waypoints=${waypoints.join('|')}' : '';
+
+    return 'https://www.google.com/maps/dir/?api=1&origin=$origin&destination=$destination$waypointsString&travelmode=transit';
+  }
+
+  void _openGoogleMaps() async {
+    final url = _generateGoogleMapsUrl();
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open Google Maps')),
+      );
+    }
+  }
+
+  void _openGoogleLens() async {
+    const url = 'https://lens.google.com/';
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open Google Lens')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -903,6 +944,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               );
             },
             tooltip: 'Open Compass',
+          ),
+          IconButton(
+            icon: Icon(Icons.map),
+            onPressed: _openGoogleMaps,
+            tooltip: 'Open Google Maps',
           ),
         ],
       ),
@@ -1054,9 +1100,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     TransportMode(name: 'Walking', icon: Icons.directions_walk, speedKmPerHour: 5),
                     TransportMode(name: 'Cycling', icon: Icons.directions_bike, speedKmPerHour: 15),
                     TransportMode(name: 'Driving', icon: Icons.directions_car, speedKmPerHour: 50),
-                    TransportMode(name: 'Metro', icon: Icons.subway, speedKmPerHour: 30),
-                    TransportMode(name: 'RER', icon: Icons.train, speedKmPerHour: 40),
-                    TransportMode(name: 'Bus', icon: Icons.directions_bus, speedKmPerHour: 20),
+                    TransportMode(name: 'Public Transport', icon: Icons.directions_transit, speedKmPerHour: 30),
                   ],
                   selectedMode: _selectedMode,
                   onListPressed: _showLocationsList,
