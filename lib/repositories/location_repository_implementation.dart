@@ -172,7 +172,7 @@ class ILocationRepository implements LocationRepository {
         nom: "Les Invalides",
         description: "Complexe de bâtiments abritant des musées et monuments liés à l'histoire militaire de la France.",
         imagePath: "lib/assets/images/les_invalides.png",
-        category: Categories.Museum,
+        category: Categories.HistoricalSite,
         localization: Localization("129 Rue de Grenelle, 75007 Paris", 48.8559, 2.3127),
         schedule: null,
         contact: null,

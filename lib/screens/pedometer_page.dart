@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +11,10 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:flutter/widgets.dart' show BuildContext;
+import 'package:health/health.dart';
+
+// Create a global Health instance
+final health = Health();
 
 class PedometerPage extends StatefulWidget {
   const PedometerPage({Key? key}) : super(key: key);
@@ -26,6 +29,8 @@ class _PedometerPageState extends State<PedometerPage> {
   int _caloriesBurned = 0;
   Duration _activityTime = Duration.zero;
   int _dailyGoal = 10000;
+  bool _authorized = false;
+  List<RecordingMethod> recordingMethodsToFilter = [];
 
   List<int> _weeklySteps = List.filled(7, 0);
   List<int> _monthlySteps = List.filled(30, 0);
@@ -34,27 +39,105 @@ class _PedometerPageState extends State<PedometerPage> {
   Database? _database;
   bool _isLoading = true;
 
-  void _onReceiveData(Object data) {
-    print('Données reçues du service en arrière-plan : $data');
-    if (data is int && mounted) {
-      setState(() {
-        _dailySteps = data;
-        _distanceKm = _dailySteps * 0.0007;
-        _caloriesBurned = (_dailySteps * 0.04).round();
-        _activityTime = Duration(minutes: (_dailySteps * 0.01).round());
+  @override
+  void initState() {
+    super.initState();
+    // Configure health plugin before use
+    health.configure();
+    FlutterForegroundTask.addTaskDataCallback(_onReceiveData);
 
-        // Mise à jour des données hebdomadaires et mensuelles
-        _updateWeeklyAndMonthlyData();
-      });
-      _saveStepData();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _requestPermissions();
+      await _resetStepsAtMidnight(); // Ajoutez cette ligne
+      await _loadInitialSteps();
+      _initForegroundTask();
+      await _startForegroundTask();
+      await _syncWithHealthApp();
+    });
+  }
+
+  Future<void> _authorize() async {
+    // Request activity recognition permission for step counting
+    await Permission.activityRecognition.request();
+    await Permission.location.request();
+
+    // Check if we have health permissions
+    bool? hasPermissions = await health.hasPermissions([HealthDataType.STEPS]);
+
+    // Request authorization if needed
+    if (hasPermissions != null && !hasPermissions) {
+      try {
+        _authorized = await health.requestAuthorization([HealthDataType.STEPS]);
+      } catch (error) {
+        print("Exception in authorize: $error");
+        _authorized = false;
+      }
+    } else {
+      _authorized = true;
     }
   }
 
-  // Ajoutez cette nouvelle méthode
+  Future<void> _syncWithHealthApp() async {
+    await _authorize();
+
+    if (_authorized) {
+      try {
+        final now = DateTime.now();
+        final midnight = DateTime(now.year, now.month, now.day);
+
+        int? healthSteps = await health.getTotalStepsInInterval(
+            midnight,
+            now,
+            includeManualEntry: !recordingMethodsToFilter.contains(RecordingMethod.manual)
+        );
+
+        if (healthSteps != null && healthSteps > 0) {
+          // Utilisez les données de l'application Santé comme source de vérité
+          setState(() {
+            _dailySteps = healthSteps;
+            _updateDerivedMetrics();
+          });
+          await _saveStepData();
+
+          // Mettez à jour le service en arrière-plan avec la nouvelle valeur
+          FlutterForegroundTask.updateService(
+            notificationTitle: 'Podomètre en cours d\'exécution',
+            notificationText: '$_dailySteps pas',
+          );
+        }
+      } catch (error) {
+        print("Exception in syncWithHealthApp: $error");
+      }
+    }
+  }
+
+  void _updateDerivedMetrics() {
+    _distanceKm = _dailySteps * 0.0007;
+    _caloriesBurned = (_dailySteps * 0.04).toInt();
+    _activityTime = Duration(minutes: (_dailySteps * 0.01).toInt());
+    _updateWeeklyAndMonthlyData();
+  }
+
+  void _onReceiveData(Object? data) {
+    print('Données reçues du service en arrière-plan : $data');
+    if (data is int && mounted) {
+      setState(() {
+        // Mettez à jour _dailySteps seulement si la nouvelle valeur est supérieure
+        if (data > _dailySteps) {
+          _dailySteps = data;
+          _updateDerivedMetrics();
+        }
+      });
+      _saveStepData();
+      // Synchronisez avec l'application Santé pour obtenir la valeur la plus précise
+      _syncWithHealthApp();
+    }
+  }
+
   void _updateWeeklyAndMonthlyData() {
     final now = DateTime.now();
-    final todayIndex = now.weekday - 1; // 0 pour lundi, 6 pour dimanche
-    final dayOfMonth = now.day - 1; // 0 pour le premier jour du mois
+    final todayIndex = now.weekday - 1;
+    final dayOfMonth = now.day - 1;
 
     _weeklySteps[todayIndex] = _dailySteps;
     _monthlySteps[dayOfMonth] = _dailySteps;
@@ -151,6 +234,7 @@ class _PedometerPageState extends State<PedometerPage> {
     try {
       await _initDatabase();
       await _loadSavedData();
+      await _syncWithHealthApp();
       _initPedometer();
       if (mounted) {
         setState(() {
@@ -166,8 +250,6 @@ class _PedometerPageState extends State<PedometerPage> {
       }
     }
   }
-
-
 
   void _initForegroundTask() {
     FlutterForegroundTask.init(
@@ -186,17 +268,13 @@ class _PedometerPageState extends State<PedometerPage> {
         playSound: false,
       ),
       foregroundTaskOptions: ForegroundTaskOptions(
-        eventAction: ForegroundTaskEventAction.nothing(),  // Utilisation du constructeur factory nothing()
+        eventAction: ForegroundTaskEventAction.nothing(),
         autoRunOnBoot: true,
         allowWakeLock: true,
         allowWifiLock: true,
       ),
     );
   }
-
-
-
-
 
   Future<void> _startForegroundTask() async {
     if (await FlutterForegroundTask.isRunningService) {
@@ -218,12 +296,7 @@ class _PedometerPageState extends State<PedometerPage> {
   void _onStepCount(StepCount event) {
     setState(() {
       _dailySteps = event.steps;
-      _distanceKm = _dailySteps * 0.0007;
-      _caloriesBurned = (_dailySteps * 0.04).round();
-      _activityTime = Duration(minutes: (_dailySteps * 0.01).round());
-
-      // Mise à jour des données hebdomadaires et mensuelles
-      _updateWeeklyAndMonthlyData();
+      _updateDerivedMetrics();
     });
     _saveStepData();
   }
@@ -302,6 +375,47 @@ class _PedometerPageState extends State<PedometerPage> {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<void> _loadInitialSteps() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int savedSteps = prefs.getInt('dailySteps') ?? 0;
+    DateTime lastResetTime = DateTime.fromMillisecondsSinceEpoch(
+        prefs.getInt('lastResetTime') ?? DateTime.now().millisecondsSinceEpoch);
+
+    if (DateTime.now().day != lastResetTime.day) {
+      // Si c'est un nouveau jour, réinitialiser les pas
+      savedSteps = 0;
+      await prefs.setInt('dailySteps', 0);
+      await prefs.setInt('lastResetTime', DateTime.now().millisecondsSinceEpoch);
+    }
+
+    setState(() {
+      _dailySteps = savedSteps;
+      _updateDerivedMetrics();
+    });
+  }
+
+  Future<void> _resetStepsAtMidnight() async {
+    final now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    final lastResetTime = DateTime.fromMillisecondsSinceEpoch(
+        prefs.getInt('lastResetTime') ?? now.millisecondsSinceEpoch
+    );
+
+    if (now.day != lastResetTime.day) {
+      // Réinitialiser les pas à minuit
+      setState(() {
+        _dailySteps = 0;
+        _updateDerivedMetrics();
+      });
+      await prefs.setInt('dailySteps', 0);
+      await prefs.setInt('lastResetTime', now.millisecondsSinceEpoch);
+
+      // Synchroniser avec l'application Santé après la réinitialisation
+      await _syncWithHealthApp();
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -609,18 +723,6 @@ class _PedometerPageState extends State<PedometerPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    FlutterForegroundTask.addTaskDataCallback(_onReceiveData);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _requestPermissions();
-      _initForegroundTask();
-      await _startForegroundTask();
-    });
-  }
-
-  @override
   void dispose() {
     FlutterForegroundTask.removeTaskDataCallback(_onReceiveData);
     FlutterForegroundTask.stopService();
@@ -642,33 +744,61 @@ void startCallback() {
 
 class PedometerTaskHandler extends TaskHandler {
   int _steps = 0;
+  int _lastReportedSteps = 0;
+  DateTime _lastResetTime = DateTime.now();
   StreamSubscription<StepCount>? _stepCountSubscription;
+  SharedPreferences? _prefs;
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    // Request permissions
     await [Permission.activityRecognition, Permission.location].request();
+    _prefs = await SharedPreferences.getInstance();
+
+    // Charger l'état sauvegardé
+    _steps = _prefs?.getInt('dailySteps') ?? 0;
+    _lastResetTime = DateTime.fromMillisecondsSinceEpoch(
+      _prefs?.getInt('lastResetTime') ?? DateTime.now().millisecondsSinceEpoch,
+    );
 
     _stepCountSubscription = Pedometer.stepCountStream.listen((StepCount event) {
-      _steps = event.steps;
-      FlutterForegroundTask.updateService(
-        notificationTitle: 'Podomètre en cours d\'exécution',
-        notificationText: '$_steps pas',
-      );
-      // Send step count to main isolate
-      FlutterForegroundTask.sendDataToMain(_steps);
-    });
-  }
+      final now = DateTime.now();
 
-  @override
-  void onRepeatEvent(DateTime timestamp) {
-    // Not used as we're using stream
+      // Réinitialiser à minuit
+      if (now.day != _lastResetTime.day) {
+        _steps = 0;
+        _lastReportedSteps = 0;
+        _lastResetTime = now;
+        _prefs?.setInt('lastResetTime', now.millisecondsSinceEpoch);
+        _prefs?.setInt('dailySteps', 0);
+      }
+
+      // Calculer la différence de pas et mettre à jour si raisonnable
+      int stepsDifference = event.steps - _lastReportedSteps;
+      if (stepsDifference > 0 && stepsDifference < 100) { // Filtrer les sauts déraisonnables
+        _steps += stepsDifference;
+        _lastReportedSteps = event.steps;
+        _prefs?.setInt('dailySteps', _steps);
+
+        // Mettre à jour la notification et l'interface utilisateur principale
+        FlutterForegroundTask.updateService(
+          notificationTitle: 'Podomètre en cours d\'exécution',
+          notificationText: '$_steps pas',
+        );
+        FlutterForegroundTask.sendDataToMain(_steps);
+      }
+    });
   }
 
   @override
   Future<void> onDestroy(DateTime timestamp) async {
     await _stepCountSubscription?.cancel();
     _stepCountSubscription = null;
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // Implementation of required method
+    // Not used as we're using stream-based updates
   }
 
   @override
@@ -681,4 +811,6 @@ class PedometerTaskHandler extends TaskHandler {
     print('Notification pressée');
   }
 }
+
+
 

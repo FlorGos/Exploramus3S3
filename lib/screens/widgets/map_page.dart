@@ -112,7 +112,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           delay: Duration(milliseconds: 10)
       );
     } catch (e) {
-      print('Failed to capture screenshot: $e');
+      print('Impossible de prendre une capture d écran: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur lors de la capture d\'écran')),
       );
@@ -129,12 +129,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             imageBytes = data.buffer.asUint8List();
           }
         } catch (e) {
-          print('Failed to load image for ${location.nom}: $e');
+          print('Impossible de charger limage de : ${location.nom}: $e');
           try {
             ByteData placeholderData = await rootBundle.load('assets/placeholder.png');
             imageBytes = placeholderData.buffer.asUint8List();
           } catch (e) {
-            print('Failed to load placeholder image: $e');
+            print('Impossible de charger limage de : $e');
           }
         }
         return LocationWithImage(location: location, imageBytes: imageBytes);
@@ -226,18 +226,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       try {
         return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
       } catch (e) {
-        print('Failed to load placeholder image: $e');
+        print('Impossible de charger l image de : $e');
         return Uint8List(0);
       }
     }
     try {
       return await rootBundle.load(imagePath).then((data) => data.buffer.asUint8List());
     } catch (e) {
-      print('Failed to load image: $e');
+      print('Impossible de charger limage de : $e');
       try {
         return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
       } catch (e) {
-        print('Failed to load placeholder image: $e');
+        print('Impossible de charger limage de : $e');
         return Uint8List(0);
       }
     }
@@ -307,7 +307,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           _isOSRMRouteVisible = true;
         });
       } else {
-        print('Failed to fetch OSRM route: ${response.statusCode}');
+        print('Impossible dobt ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching OSRM route: $e');
