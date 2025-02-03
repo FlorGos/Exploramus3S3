@@ -7,8 +7,11 @@ import 'package:intl/intl.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as path_package;
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:app_settings/app_settings.dart';
+import 'package:flutter/widgets.dart' show BuildContext;
 
 class PedometerPage extends StatefulWidget {
   const PedometerPage({Key? key}) : super(key: key);
@@ -58,16 +61,90 @@ class _PedometerPageState extends State<PedometerPage> {
   }
 
   Future<void> _requestPermissions() async {
-    final notificationPermission = await FlutterForegroundTask.checkNotificationPermission();
-    if (notificationPermission != NotificationPermission.granted) {
-      await FlutterForegroundTask.requestNotificationPermission();
-    }
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.activityRecognition,
+      Permission.location,
+    ].request();
 
-    if (Platform.isAndroid) {
-      if (!await FlutterForegroundTask.isIgnoringBatteryOptimizations) {
-        await FlutterForegroundTask.requestIgnoreBatteryOptimization();
-      }
+    if (statuses.values.every((status) => status.isGranted)) {
+      await _initializeApp();
+    } else {
+      await _showPermissionDialog();
     }
+  }
+
+  Future<void> _showPermissionDialog() async {
+    await showDialog<void>(
+      context: context as BuildContext,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Autorisations nécessaires'),
+          content: Text('Cette application nécessite des autorisations pour accéder à l\'activité et à la localisation afin de fonctionner correctement.'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Quitter'),
+              onPressed: () => exit(0),
+            ),
+            TextButton(
+              child: Text('Accorder'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                bool granted = await _checkPermissions();
+                if (!granted) {
+                  await _showOpenSettingsDialog();
+                } else {
+                  await _initializeApp();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showOpenSettingsDialog() async {
+    await showDialog<void>(
+      context: context as BuildContext,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Permissions requises'),
+          content: Text('Vous devez accorder les permissions pour utiliser cette fonctionnalité. Voulez-vous accéder aux paramètres de l\'application ?'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Annuler'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                exit(0);
+              },
+            ),
+            TextButton(
+              child: Text('Ouvrir les paramètres'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await AppSettings.openAppSettings();
+                bool granted = await _checkPermissions();
+                if (granted) {
+                  await _initializeApp();
+                } else {
+                  exit(0);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool> _checkPermissions() async {
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.activityRecognition,
+      Permission.location,
+    ].request();
+    return statuses.values.every((status) => status.isGranted);
   }
 
   Future<void> _initializeApp() async {
@@ -153,7 +230,7 @@ class _PedometerPageState extends State<PedometerPage> {
 
   Future<void> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'pedometer_database.db');
+    final path = path_package.join(databasesPath, 'pedometer_database.db');
 
     _database = await openDatabase(
       path,
@@ -535,7 +612,6 @@ class _PedometerPageState extends State<PedometerPage> {
   void initState() {
     super.initState();
     FlutterForegroundTask.addTaskDataCallback(_onReceiveData);
-    _initializeApp();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
@@ -570,6 +646,9 @@ class PedometerTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    // Request permissions
+    await [Permission.activityRecognition, Permission.location].request();
+
     _stepCountSubscription = Pedometer.stepCountStream.listen((StepCount event) {
       _steps = event.steps;
       FlutterForegroundTask.updateService(
