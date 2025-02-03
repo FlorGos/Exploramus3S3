@@ -1,4 +1,3 @@
-import 'package:swipezone/services/open_trip_planner_service.dart';
 import 'dart:math' show pi, sin, cos, sqrt, atan2;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -28,8 +27,10 @@ import 'package:printing/printing.dart';
 import 'package:screenshot/screenshot.dart';
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -69,7 +70,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late MapController _mapController;
   bool _showMarkersList = false;
   bool _isListVisible = true;
-  late Map<String, LatLng> _originalPositions; // Updated type
+  late Map<String, LatLng> _originalPositions;
   final ScreenshotController screenshotController = ScreenshotController();
 
   @override
@@ -88,7 +89,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _controller.forward();
     _mapController = MapController();
 
-    // Initialize _originalPositions
     _originalPositions = {
       for (var location in widget.locations)
         location.nom: LatLng(location.localization.lat!, location.localization.lng!)
@@ -101,9 +101,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     // Capture map screenshot
     Uint8List? mapImageBytes;
     try {
-      mapImageBytes = await screenshotController.capture(pixelRatio: 3.0);
+      // Ensure the map is fully rendered
+      await Future.delayed(Duration(milliseconds: 500));
+
+      mapImageBytes = await screenshotController.capture(
+          pixelRatio: 3.0,
+          delay: Duration(milliseconds: 10)
+      );
     } catch (e) {
       print('Failed to capture screenshot: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la capture d\'écran')),
+      );
+      return;
     }
 
     // Load all location images before creating PDF
@@ -128,10 +138,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       }),
     );
 
-    // Get distance and duration
-    double totalDistance = _getTotalDistance();
-    int totalDurationMinutes = (_totalDuration / 60).round();
-
     // First page with map and general information
     pdf.addPage(
       pw.Page(
@@ -144,11 +150,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
               pw.SizedBox(height: 20),
               if (mapImageBytes != null)
-                pw.Image(pw.MemoryImage(mapImageBytes)),
+                pw.Image(pw.MemoryImage(mapImageBytes), height: 300, fit: pw.BoxFit.contain),
               pw.SizedBox(height: 20),
-              pw.Text('Distance totale: ${totalDistance.toStringAsFixed(2)} km'),
+              pw.Text('Distance totale: ${_totalDistance.toStringAsFixed(2)} km'),
               if (_currentProfile == 'foot' || _currentProfile == 'bike' || _currentProfile == 'car')
-                pw.Text('Durée (${_currentProfile}): $totalDurationMinutes minutes')
+                pw.Text('Durée (${_currentProfile}): ${(_totalDuration / 60).round()} minutes')
               else
                 pw.Text('Durée: Non calculée (sélectionnez un mode de transport terrestre)'),
               pw.SizedBox(height: 20),
@@ -214,31 +220,25 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   Future<Uint8List> _getImageBytes(String? imagePath) async {
     if (imagePath == null || imagePath == "null") {
-      // Return a placeholder image from assets folder
       try {
         return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
       } catch (e) {
         print('Failed to load placeholder image: $e');
-        // Return an empty image if even the placeholder fails
         return Uint8List(0);
       }
     }
     try {
-      // Load the location image
       return await rootBundle.load(imagePath).then((data) => data.buffer.asUint8List());
     } catch (e) {
       print('Failed to load image: $e');
-      // Try to return placeholder on failure
       try {
         return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
       } catch (e) {
         print('Failed to load placeholder image: $e');
-        // Return an empty image if everything fails
         return Uint8List(0);
       }
     }
   }
-
 
   @override
   void dispose() {
@@ -267,7 +267,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Future<void> _fetchOSRMRoute(String profile) async {
     setState(() {
       _isLoadingRoute = true;
-      _currentProfile = profile;  // Ajoutez cette ligne
+      _currentProfile = profile;
     });
 
     final sortedLocations = _sortLocationsByDistance();
@@ -365,7 +365,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         _isOSRMRouteVisible = false;
         _showNavigationInstructions = false;
         _showTransitInfo = false;
-        _currentProfile = '';  // Ajoutez cette ligne
+        _currentProfile = '';
       });
       return;
     }
@@ -447,20 +447,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           orElse: () => currentLocation,
         );
 
-        // Réinitialiser la position à la position initiale ou conserver la position actuelle
         currentLocation.localization.lat = initialLocation.localization.lat;
         currentLocation.localization.lng = initialLocation.localization.lng;
 
-        // Réinitialiser le statut "aimé"
         currentLocation.isLiked = locationManager.likedLocations.any((likedLoc) => likedLoc.nom == currentLocation.nom);
 
-        // Si c'est un nouveau marqueur, l'ajouter à _initialLocations
         if (initialLocation == currentLocation) {
           _initialLocations.add(currentLocation.clone());
         }
       }
 
-      // Supprimer les marqueurs qui n'existent plus
       _initialLocations.removeWhere((initialLoc) => !widget.locations.any((loc) => loc.nom == initialLoc.nom));
     });
     _updateBasicPolylinePoints();
@@ -477,7 +473,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     } else if (location.isLiked || locationManager.likedLocations.any((likedLoc) => likedLoc.nom == location.nom)) {
       return Colors.red;
     }
-    return Theme.of(context).primaryColor; // Couleur par défaut pour les autres marqueurs
+    return Theme.of(context).primaryColor;
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng point) {
@@ -524,10 +520,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   widget.locations.add(newLocation);
                   _isAddingMarker = false;
                 });
-                _updateOriginalPositions(); // Added call to update original positions
+                _updateOriginalPositions();
                 _addNewMarkerToInitialLocations(newLocation);
                 _updateBasicPolylinePoints();
-                _updateRouteForSelectedMode(); // Ajoutez cette ligne
+                _updateRouteForSelectedMode();
               },
             ),
           ],
@@ -539,7 +535,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _addNewMarkerToInitialLocations(Location newLocation) {
     _initialLocations.add(newLocation.clone());
   }
-
 
   void _updateMarkerPosition(Location location, LatLng newPosition) {
     final locationManager = Provider.of<LocationManager>(context, listen: false);
@@ -567,7 +562,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   void _updateRouteForSelectedMode() {
     if (_selectedMode == null) {
-      // Si aucun mode n'est sélectionné, mettez simplement à jour les polylines de base
       _updateBasicPolylinePoints();
       return;
     }
@@ -589,12 +583,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         _fetchTransitRoutes();
         break;
       default:
-      // Pour tout autre cas, mettez à jour les polylines de base
         _updateBasicPolylinePoints();
         break;
     }
   }
-
 
   Future<void> _updateLocationAddress(Location location) async {
     final address = await _getStreetNameFromCoordinates(location.localization.lat!, location.localization.lng!);
@@ -649,11 +641,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               onPressed: () {
                 setState(() {
                   widget.locations.remove(location);
-                  _originalPositions.remove(location.nom); // Remove from original positions
+                  _originalPositions.remove(location.nom);
                 });
                 Navigator.of(context).pop();
                 _updateBasicPolylinePoints();
-                _updateRouteForSelectedMode();  // Ajoutez cette ligne
+                _updateRouteForSelectedMode();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Location deleted')),
                 );
@@ -763,31 +755,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
-  Future<void> _saveScreenshot() async {
-    try {
-      // Attendre que le widget soit complètement rendu
-      await Future.delayed(Duration(milliseconds: 500));
-
-      final Uint8List? imageBytes = await screenshotController.capture(pixelRatio: 3.0);
-      if (imageBytes != null) {
-        final directory = await getApplicationDocumentsDirectory();
-        final imagePath = await File('${directory.path}/map_screenshot.png').create();
-        await imagePath.writeAsBytes(imageBytes);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Screenshot saved successfully')),
-        );
-      } else {
-        throw Exception('Failed to capture screenshot');
-      }
-    } catch (e) {
-      print('Error saving screenshot: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save screenshot: $e')),
-      );
-    }
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -910,7 +877,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     elevation: 4,
                     mini: true,
                   ),
-
                   SizedBox(height: 8),
                   FloatingActionButton(
                     heroTag: "downloadPdf",
@@ -987,7 +953,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               bottom: 100,
               child: TransitInfoPanel(
                 routes: _transitRoutes,
-                onClose: () => setState(() =>_showTransitInfo = false),
+                onClose: () => setState(() => _showTransitInfo = false),
               ),
             ),
         ],
