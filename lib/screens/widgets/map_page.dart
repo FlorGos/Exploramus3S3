@@ -31,6 +31,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform;
+import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -756,12 +759,132 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _shareRoute() {
-    // Implement sharing functionality here
-    // For now, we'll just show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Sharing functionality to be implemented')),
+  Future<void> _shareRoute() async {
+    try {
+      // Générer le PDF
+      final pdf = await _generatePdf();
+
+      // Sauvegarder temporairement le PDF
+      final output = await getTemporaryDirectory();
+      final file = File('${output.path}/itinerary.pdf');
+      await file.writeAsBytes(await pdf.save());
+
+      // Préparer l'e-mail
+      final Email email = Email(
+        body: 'Veuillez trouver ci-joint l\'itinéraire de mon voyage.',
+        subject: 'Mon itinéraire de voyage',
+        recipients: ['recipient@example.com'],
+        attachmentPaths: [file.path],
+        isHTML: false,
+      );
+
+      // Envoyer l'e-mail
+      await FlutterEmailSender.send(email);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('E-mail avec itinéraire envoyé avec succès')),
+      );
+    } catch (e) {
+      print('Erreur lors de l\'envoi de l\'e-mail : $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de l\'envoi de l\'e-mail')),
+      );
+    }
+  }
+
+  Future<pw.Document> _generatePdf() async {
+    final pdf = pw.Document();
+
+    // Capture map screenshot
+    Uint8List? mapImageBytes = await screenshotController.capture(
+        pixelRatio: 3.0,
+        delay: Duration(milliseconds: 10)
     );
+
+    // Load all location images
+    List<LocationWithImage> locationsWithImages = await Future.wait(
+      widget.locations.map((location) async {
+        Uint8List? imageBytes = await _getImageBytes(location.imagePath);
+        return LocationWithImage(location: location, imageBytes: imageBytes);
+      }),
+    );
+
+    // First page with map and general information
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Détails de l\'itinéraire',
+                  style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)
+              ),
+              pw.SizedBox(height: 20),
+              if (mapImageBytes != null)
+                pw.Image(pw.MemoryImage(mapImageBytes), height: 300, fit: pw.BoxFit.contain),
+              pw.SizedBox(height: 20),
+              pw.Text('Distance totale: ${_totalDistance.toStringAsFixed(2)} km'),
+              if (_currentProfile == 'foot' || _currentProfile == 'bike' || _currentProfile == 'car')
+                pw.Text('Durée (${_currentProfile}): ${(_totalDuration / 60).round()} minutes')
+              else
+                pw.Text('Durée: Non calculée (sélectionnez un mode de transport terrestre)'),
+              pw.SizedBox(height: 20),
+              pw.Text('Mode de transport: ${_selectedMode?.name ?? "Non spécifié"}'),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Locations pages
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text('Lieux visités',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)
+              ),
+            ),
+            ...locationsWithImages.map((locationWithImage) => pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(locationWithImage.location.nom,
+                    style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)
+                ),
+                pw.Text('Adresse: ${locationWithImage.location.localization.adress ?? "Non spécifiée"}'),
+                pw.Text('Description: ${locationWithImage.location.description ?? "Aucune description"}'),
+                if (locationWithImage.hasValidImage)
+                  pw.Image(pw.MemoryImage(locationWithImage.imageBytes!)),
+                pw.SizedBox(height: 10),
+              ],
+            )).toList(),
+          ];
+        },
+      ),
+    );
+
+    // Navigation steps pages
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text('Étapes',
+                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)
+              ),
+            ),
+            ...(_navigationSteps.map((step) => pw.Paragraph(text: '- ${step.instruction}')).toList()),
+          ];
+        },
+      ),
+    );
+
+    return pdf;
   }
 
   @override
