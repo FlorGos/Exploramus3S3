@@ -12,11 +12,11 @@ class LegendWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildLegendItem(Colors.yellow, 'Favoris'),
+          _buildLegendItem(Colors.yellow, 'Favorites'),
           SizedBox(height: 4),
-          _buildLegendItem(Colors.red, 'Likés'),
+          _buildLegendItem(Colors.red, 'Liked'),
           SizedBox(height: 4),
-          _buildLegendItem(Theme.of(context).primaryColor, 'Autres'),
+          _buildLegendItem(Theme.of(context).primaryColor, 'Others'),
         ],
       ),
     );

@@ -58,8 +58,8 @@ class _PlanningPageState extends State<PlanningPage> {
           foregroundColor: Colors.white,
           bottom: TabBar(
             tabs: [
-              Tab(text: 'Likés sélectionnés'),
-              Tab(text: 'Favoris sélectionnés'),
+              Tab(text: 'Selected Liked'),
+              Tab(text: 'Selected Favorites'),
             ],
           ),
         ),
@@ -90,14 +90,14 @@ class _PlanningPageState extends State<PlanningPage> {
               }
             } catch (e) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Impossible d\'obtenir la localisation. Veuillez activer les services de localisation.'),
+                content: Text('Unable to get location. Please enable location services.'),
                 backgroundColor: Colors.red,
               ));
             }
           },
-          tooltip: 'Voir sur la carte',
+          tooltip: 'View on map',
           icon: Icon(Icons.map),
-          label: Text('Voir sur la carte'),
+          label: Text('View on map'),
           backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
         ),
@@ -112,13 +112,13 @@ class _PlanningPageState extends State<PlanningPage> {
           padding: EdgeInsets.all(16),
           color: Theme.of(context).primaryColor.withOpacity(0.1),
           child: Text(
-            'Votre itinéraire (${locations.length} lieux)',
+            'Your itinerary (${locations.length} places)',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(
           child: locations.isEmpty
-              ? Center(child: Text('Aucun lieu sélectionné dans cette catégorie'))
+              ? Center(child: Text('No places selected in this category'))
               : ListView.builder(
             itemCount: locations.length,
             itemBuilder: (context, index) {
@@ -135,10 +135,10 @@ class _PlanningPageState extends State<PlanningPage> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(location.description ?? 'Pas de description'),
+                      Text(location.description ?? 'No description'),
                       SizedBox(height: 4),
                       Text(
-                        'Coordonnées: ${location.localization.lat?.toStringAsFixed(4) ?? 'N/A'}, ${location.localization.lng?.toStringAsFixed(4) ?? 'N/A'}',
+                        'Coordinates: ${location.localization.lat?.toStringAsFixed(4) ?? 'N/A'}, ${location.localization.lng?.toStringAsFixed(4) ?? 'N/A'}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],

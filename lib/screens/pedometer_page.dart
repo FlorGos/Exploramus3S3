@@ -48,7 +48,7 @@ class _PedometerPageState extends State<PedometerPage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
-      await _resetStepsAtMidnight(); // Ajoutez cette ligne
+      await _resetStepsAtMidnight(); // Add this line
       await _loadInitialSteps();
       _initForegroundTask();
       await _startForegroundTask();
@@ -92,17 +92,17 @@ class _PedometerPageState extends State<PedometerPage> {
         );
 
         if (healthSteps != null && healthSteps > 0) {
-          // Utilisez les données de l'application Santé comme source de vérité
+          // Use Health app data as the source of truth
           setState(() {
             _dailySteps = healthSteps;
             _updateDerivedMetrics();
           });
           await _saveStepData();
 
-          // Mettez à jour le service en arrière-plan avec la nouvelle valeur
+          // Update the background service with the new value
           FlutterForegroundTask.updateService(
-            notificationTitle: 'Podomètre en cours d\'exécution',
-            notificationText: '$_dailySteps pas',
+            notificationTitle: 'Pedometer running',
+            notificationText: '$_dailySteps steps',
           );
         }
       } catch (error) {
@@ -119,17 +119,17 @@ class _PedometerPageState extends State<PedometerPage> {
   }
 
   void _onReceiveData(Object? data) {
-    print('Données reçues du service en arrière-plan : $data');
+    print('Data received from background service: $data');
     if (data is int && mounted) {
       setState(() {
-        // Mettez à jour _dailySteps seulement si la nouvelle valeur est supérieure
+        // Update _dailySteps only if the new value is greater
         if (data > _dailySteps) {
           _dailySteps = data;
           _updateDerivedMetrics();
         }
       });
       _saveStepData();
-      // Synchronisez avec l'application Santé pour obtenir la valeur la plus précise
+      // Sync with Health app to get the most accurate value
       _syncWithHealthApp();
     }
   }
@@ -162,15 +162,15 @@ class _PedometerPageState extends State<PedometerPage> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Autorisations nécessaires'),
-          content: Text('Cette application nécessite des autorisations pour accéder à l\'activité et à la localisation afin de fonctionner correctement.'),
+          title: Text('Permissions required'),
+          content: Text('This app requires permissions to access activity and location to function properly.'),
           actions: <Widget>[
             TextButton(
-              child: Text('Quitter'),
+              child: Text('Quit'),
               onPressed: () => exit(0),
             ),
             TextButton(
-              child: Text('Accorder'),
+              child: Text('Grant'),
               onPressed: () async {
                 Navigator.of(context).pop();
                 bool granted = await _checkPermissions();
@@ -193,18 +193,18 @@ class _PedometerPageState extends State<PedometerPage> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Permissions requises'),
-          content: Text('Vous devez accorder les permissions pour utiliser cette fonctionnalité. Voulez-vous accéder aux paramètres de l\'application ?'),
+          title: Text('Permissions required'),
+          content: Text('You need to grant permissions to use this feature. Do you want to open the app settings?'),
           actions: <Widget>[
             TextButton(
-              child: Text('Annuler'),
+              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
                 exit(0);
               },
             ),
             TextButton(
-              child: Text('Ouvrir les paramètres'),
+              child: Text('Open settings'),
               onPressed: () async {
                 Navigator.of(context).pop();
                 await AppSettings.openAppSettings();
@@ -281,8 +281,8 @@ class _PedometerPageState extends State<PedometerPage> {
       await FlutterForegroundTask.restartService();
     } else {
       await FlutterForegroundTask.startService(
-        notificationTitle: "Podomètre en cours d'exécution",
-        notificationText: "Comptage des pas en arrière-plan",
+        notificationTitle: "Pedometer running",
+        notificationText: "Counting steps in the background",
         callback: startCallback,
       );
     }
@@ -383,7 +383,7 @@ class _PedometerPageState extends State<PedometerPage> {
         prefs.getInt('lastResetTime') ?? DateTime.now().millisecondsSinceEpoch);
 
     if (DateTime.now().day != lastResetTime.day) {
-      // Si c'est un nouveau jour, réinitialiser les pas
+      // If it's a new day, reset the steps
       savedSteps = 0;
       await prefs.setInt('dailySteps', 0);
       await prefs.setInt('lastResetTime', DateTime.now().millisecondsSinceEpoch);
@@ -403,7 +403,7 @@ class _PedometerPageState extends State<PedometerPage> {
     );
 
     if (now.day != lastResetTime.day) {
-      // Réinitialiser les pas à minuit
+      // Reset steps at midnight
       setState(() {
         _dailySteps = 0;
         _updateDerivedMetrics();
@@ -411,11 +411,10 @@ class _PedometerPageState extends State<PedometerPage> {
       await prefs.setInt('dailySteps', 0);
       await prefs.setInt('lastResetTime', now.millisecondsSinceEpoch);
 
-      // Synchroniser avec l'application Santé après la réinitialisation
+      // Sync with Health app after reset
       await _syncWithHealthApp();
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +429,7 @@ class _PedometerPageState extends State<PedometerPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Podomètre'),
+        title: Text('Pedometer'),
         backgroundColor: Colors.blue,
       ),
       body: SingleChildScrollView(
@@ -462,20 +461,20 @@ class _PedometerPageState extends State<PedometerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Aujourd\'hui',
+              'Today',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildInfoItem(Icons.directions_walk, '$_dailySteps', 'Pas'),
+                _buildInfoItem(Icons.directions_walk, '$_dailySteps', 'Steps'),
                 _buildInfoItem(Icons.straighten, '${_distanceKm.toStringAsFixed(2)} km', 'Distance'),
                 _buildInfoItem(Icons.local_fire_department, '$_caloriesBurned', 'Calories'),
               ],
             ),
             SizedBox(height: 10),
-            Text('Temps d\'activité: ${_activityTime.inHours}h ${_activityTime.inMinutes % 60}min'),
+            Text('Activity time: ${_activityTime.inHours}h ${_activityTime.inMinutes % 60}min'),
             SizedBox(height: 10),
             LinearProgressIndicator(
               value: _dailySteps / _dailyGoal,
@@ -483,7 +482,7 @@ class _PedometerPageState extends State<PedometerPage> {
               valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
             ),
             SizedBox(height: 5),
-            Text('Objectif: $_dailyGoal pas'),
+            Text('Goal: $_dailyGoal steps'),
           ],
         ),
       ),
@@ -510,7 +509,7 @@ class _PedometerPageState extends State<PedometerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cette semaine',
+              'This week',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
@@ -526,7 +525,7 @@ class _PedometerPageState extends State<PedometerPage> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (double value, TitleMeta meta) {
-                          const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+                          const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                           return Text(
                             weekDays[value.toInt()],
                             style: const TextStyle(
@@ -583,7 +582,7 @@ class _PedometerPageState extends State<PedometerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ce mois',
+              'This month',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
@@ -676,7 +675,7 @@ class _PedometerPageState extends State<PedometerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Historique',
+              'History',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
@@ -687,10 +686,10 @@ class _PedometerPageState extends State<PedometerPage> {
                   return CircularProgressIndicator();
                 }
                 if (snapshot.hasError) {
-                  return Text('Erreur: ${snapshot.error}');
+                  return Text('Error: ${snapshot.error}');
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Text('Aucune donnée disponible');
+                  return Text('No data available');
                 }
                 return Column(
                   children: snapshot.data!.map((data) {
@@ -714,8 +713,8 @@ class _PedometerPageState extends State<PedometerPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(DateFormat('dd/MM/yyyy').format(date)),
-          Text('$steps pas'),
+          Text(DateFormat('MM/dd/yyyy').format(date)),
+          Text('$steps steps'),
           Text('${distance.toStringAsFixed(1)} km'),
         ],
       ),
@@ -754,7 +753,7 @@ class PedometerTaskHandler extends TaskHandler {
     await [Permission.activityRecognition, Permission.location].request();
     _prefs = await SharedPreferences.getInstance();
 
-    // Charger l'état sauvegardé
+    // Load saved state
     _steps = _prefs?.getInt('dailySteps') ?? 0;
     _lastResetTime = DateTime.fromMillisecondsSinceEpoch(
       _prefs?.getInt('lastResetTime') ?? DateTime.now().millisecondsSinceEpoch,
@@ -763,7 +762,7 @@ class PedometerTaskHandler extends TaskHandler {
     _stepCountSubscription = Pedometer.stepCountStream.listen((StepCount event) {
       final now = DateTime.now();
 
-      // Réinitialiser à minuit
+      // Reset at midnight
       if (now.day != _lastResetTime.day) {
         _steps = 0;
         _lastReportedSteps = 0;
@@ -772,17 +771,17 @@ class PedometerTaskHandler extends TaskHandler {
         _prefs?.setInt('dailySteps', 0);
       }
 
-      // Calculer la différence de pas et mettre à jour si raisonnable
+      // Calculate step difference and update if reasonable
       int stepsDifference = event.steps - _lastReportedSteps;
-      if (stepsDifference > 0 && stepsDifference < 100) { // Filtrer les sauts déraisonnables
+      if (stepsDifference > 0 && stepsDifference < 100) { // Filter unreasonable jumps
         _steps += stepsDifference;
         _lastReportedSteps = event.steps;
         _prefs?.setInt('dailySteps', _steps);
 
-        // Mettre à jour la notification et l'interface utilisateur principale
+        // Update notification and main UI
         FlutterForegroundTask.updateService(
-          notificationTitle: 'Podomètre en cours d\'exécution',
-          notificationText: '$_steps pas',
+          notificationTitle: 'Pedometer running',
+          notificationText: '$_steps steps',
         );
         FlutterForegroundTask.sendDataToMain(_steps);
       }
@@ -803,14 +802,11 @@ class PedometerTaskHandler extends TaskHandler {
 
   @override
   void onNotificationButtonPressed(String id) {
-    print('Bouton pressé: $id');
+    print('Button pressed: $id');
   }
 
   @override
   void onNotificationPressed() {
-    print('Notification pressée');
+    print('Notification pressed');
   }
 }
-
-
-

@@ -99,7 +99,7 @@ class TransparentBottomBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ElevatedButton.icon(
                 icon: Icon(Icons.refresh, size: 20, color: Colors.white),
-                label: Text('Réinitialiser', style: TextStyle(fontSize: 12)),
+                label: Text('Reset', style: TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
                   foregroundColor: Colors.white,

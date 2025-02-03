@@ -2,15 +2,14 @@ import 'package:swipezone/repositories/location_repository.dart';
 import 'package:swipezone/repositories/models/categories.dart';
 import 'package:swipezone/repositories/models/localization.dart';
 import 'package:swipezone/repositories/models/location.dart';
-//import 'package:http/http.dart' as http; // Removed as image verification is no longer needed
 
 class ILocationRepository implements LocationRepository {
   @override
   Future<List<Location>> getLocations() async {
     List<Location> locations = [
       Location(
-        nom: "Tour Eiffel",
-        description: "Emblème de Paris, cette tour en fer puddlé de 324 mètres de hauteur est l'un des sites les plus visités au monde.",
+        nom: "Eiffel Tower",
+        description: "Symbol of Paris, this 324-meter-high puddled iron tower is one of the most visited sites in the world.",
         imagePath: "lib/assets/images/tour_eiffel.png",
         category: Categories.Tower,
         localization: Localization("Champ de Mars, 5 Avenue Anatole France, 75007 Paris", 48.8584, 2.2945),
@@ -20,7 +19,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Louvre",
-        description: "Le plus grand musée d'art du monde, abritant la Joconde.",
+        description: "The world's largest art museum, home to the Mona Lisa.",
         imagePath: "lib/assets/images/musee_louvre.png",
         category: Categories.Museum,
         localization: Localization("Rue de Rivoli, 75001 Paris", 48.8606, 2.3376),
@@ -29,8 +28,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Cathédrale Notre-Dame",
-        description: "La cathédrale gothique Notre-Dame est située sur l'île de la Cité.",
+        nom: "Notre-Dame Cathedral",
+        description: "The Gothic Notre-Dame Cathedral is located on the Île de la Cité.",
         imagePath: "lib/assets/images/notre_dame.png",
         category: Categories.Church,
         localization: Localization("6 Parvis Notre-Dame - Pl. Jean-Paul II, 75004 Paris", 48.8529, 2.3508),
@@ -40,7 +39,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Arc de Triomphe",
-        description: "Construit pour honorer les victoires de Napoléon, il est situé sur la place de l'Étoile.",
+        description: "Built to honor Napoleon's victories, it is located on the Place de l'Étoile.",
         imagePath: "lib/assets/images/arc_de_triomphe.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place Charles de Gaulle, 75008 Paris", 48.8738, 2.295),
@@ -50,7 +49,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Sacré-Cœur",
-        description: "La basilique du Sacré-Cœur est un symbole religieux de Montmartre.",
+        description: "The Sacré-Cœur Basilica is a religious symbol of Montmartre.",
         imagePath: "lib/assets/images/sacre_coeur.png",
         category: Categories.Church,
         localization: Localization("35 Rue du Chevalier de la Barre, 75018 Paris", 48.8867, 2.3431),
@@ -60,7 +59,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Panthéon",
-        description: "Le Panthéon est un mausolée pour les grandes figures françaises.",
+        description: "The Pantheon is a mausoleum for great French figures.",
         imagePath: "lib/assets/images/pantheon_paris.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place du Panthéon, 75005 Paris", 48.8462, 2.3449),
@@ -70,7 +69,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Place de la Concorde",
-        description: "La plus grande place de Paris, connue pour son obélisque et ses fontaines.",
+        description: "The largest square in Paris, known for its obelisk and fountains.",
         imagePath: "lib/assets/images/place_de_la_concorde.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place de la Concorde, 75008 Paris", 48.8656, 2.3212),
@@ -80,7 +79,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Palais Garnier",
-        description: "L'Opéra Garnier est une somptueuse salle de spectacle datant du XIXe siècle.",
+        description: "The Opéra Garnier is a sumptuous 19th-century performance hall.",
         imagePath: "lib/assets/images/palais_garnier.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place de l'Opéra, 75009 Paris", 48.8719, 2.3316),
@@ -89,8 +88,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Jardin des Tuileries",
-        description: "Le jardin des Tuileries est un jardin public historique situé près du Louvre.",
+        nom: "Tuileries Garden",
+        description: "The Tuileries Garden is a historic public garden located near the Louvre.",
         imagePath: "lib/assets/images/jardin_des_tuileries.png",
         category: Categories.Park,
         localization: Localization("113 Rue de Rivoli, 75001 Paris", 48.8636, 2.3276),
@@ -100,7 +99,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Pont Alexandre III",
-        description: "Ce pont richement orné relie les Champs-Élysées et les Invalides.",
+        description: "This richly decorated bridge connects the Champs-Élysées and the Invalides.",
         imagePath: "lib/assets/images/pont_alexandre_III.png",
         category: Categories.HistoricalSite,
         localization: Localization("Pont Alexandre III, 75008 Paris", 48.8654, 2.3131),
@@ -110,7 +109,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Musée d'Orsay",
-        description: "Musée d'art installé dans une ancienne gare, spécialisé dans l'art du XIXe siècle.",
+        description: "Art museum housed in a former railway station, specializing in 19th-century art.",
         imagePath: "lib/assets/images/musee_orsay.png",
         category: Categories.Museum,
         localization: Localization("1 Rue de la Légion d'Honneur, 75007 Paris", 48.8600, 2.3266),
@@ -120,7 +119,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Centre Pompidou",
-        description: "Centre d'art moderne et contemporain reconnaissable à son architecture unique.",
+        description: "Modern and contemporary art center recognizable by its unique architecture.",
         imagePath: "lib/assets/images/centre_pompidou.png",
         category: Categories.Museum,
         localization: Localization("Place Georges-Pompidou, 75004 Paris", 48.8606, 2.3522),
@@ -130,7 +129,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Sainte-Chapelle",
-        description: "Chapelle gothique du XIIIe siècle célèbre pour ses magnifiques vitraux.",
+        description: "13th-century Gothic chapel famous for its magnificent stained glass windows.",
         imagePath: "lib/assets/images/sainte_chapelle.png",
         category: Categories.Church,
         localization: Localization("8 Boulevard du Palais, 75001 Paris", 48.8554, 2.3451),
@@ -139,8 +138,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Rodin",
-        description: "Musée dédié au sculpteur Auguste Rodin, situé dans un hôtel particulier avec jardin.",
+        nom: "Rodin Museum",
+        description: "Museum dedicated to sculptor Auguste Rodin, located in a mansion with a garden.",
         imagePath: "lib/assets/images/musee_rodin.png",
         category: Categories.Museum,
         localization: Localization("77 Rue de Varenne, 75007 Paris", 48.8555, 2.3154),
@@ -149,8 +148,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Jardin du Luxembourg",
-        description: "Grand jardin public inspiré des jardins italiens, populaire auprès des Parisiens.",
+        nom: "Luxembourg Garden",
+        description: "Large public garden inspired by Italian gardens, popular among Parisians.",
         imagePath: "lib/assets/images/jardin_luxembourg.png",
         category: Categories.Park,
         localization: Localization("75006 Paris", 48.8462, 2.3372),
@@ -160,7 +159,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Moulin Rouge",
-        description: "Célèbre cabaret parisien connu pour ses spectacles de French Cancan.",
+        description: "Famous Parisian cabaret known for its French Cancan shows.",
         imagePath: "lib/assets/images/moulin_rouge.png",
         category: Categories.HistoricalSite,
         localization: Localization("82 Boulevard de Clichy, 75018 Paris", 48.8842, 2.3322),
@@ -170,7 +169,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Les Invalides",
-        description: "Complexe de bâtiments abritant des musées et monuments liés à l'histoire militaire de la France.",
+        description: "Complex of buildings housing museums and monuments related to France's military history.",
         imagePath: "lib/assets/images/les_invalides.png",
         category: Categories.HistoricalSite,
         localization: Localization("129 Rue de Grenelle, 75007 Paris", 48.8559, 2.3127),
@@ -179,8 +178,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Palais de l'Élysée",
-        description: "Résidence officielle du président de la République française.",
+        nom: "Élysée Palace",
+        description: "Official residence of the President of the French Republic.",
         imagePath: "lib/assets/images/palais_elysee.png",
         category: Categories.HistoricalSite,
         localization: Localization("55 Rue du Faubourg Saint-Honoré, 75008 Paris", 48.8706, 2.3165),
@@ -189,8 +188,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Palais-Bourbon",
-        description: "Siège de l'Assemblée nationale française.",
+        nom: "Bourbon Palace",
+        description: "Seat of the French National Assembly.",
         imagePath: "lib/assets/images/palais_bourbon.png",
         category: Categories.HistoricalSite,
         localization: Localization("126 Rue de l'Université, 75007 Paris", 48.8620, 2.3181),
@@ -199,8 +198,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Palais du Luxembourg",
-        description: "Siège du Sénat français.",
+        nom: "Luxembourg Palace",
+        description: "Seat of the French Senate.",
         imagePath: "lib/assets/images/palais_luxembourg.png",
         category: Categories.HistoricalSite,
         localization: Localization("15 Rue de Vaugirard, 75006 Paris", 48.8462, 2.3371),
@@ -210,7 +209,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Place des Vosges",
-        description: "La plus ancienne place de Paris.",
+        description: "The oldest square in Paris.",
         imagePath: "lib/assets/images/place_des_vosges.png",
         category: Categories.HistoricalSite,
         localization: Localization("Place des Vosges, 75004 Paris", 48.8559, 2.3659),
@@ -219,8 +218,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Carnavalet",
-        description: "Musée dédié à l'histoire de Paris.",
+        nom: "Carnavalet Museum",
+        description: "Museum dedicated to the history of Paris.",
         imagePath: "lib/assets/images/musee_carnavalet.png",
         category: Categories.Museum,
         localization: Localization("23 Rue de Sévigné, 75003 Paris", 48.8570, 2.3624),
@@ -229,8 +228,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Picasso",
-        description: "Musée dédié à l'œuvre du célèbre peintre Pablo Picasso.",
+        nom: "Picasso Museum",
+        description: "Museum dedicated to the work of famous painter Pablo Picasso.",
         imagePath: "lib/assets/images/musee_picasso.png",
         category: Categories.Museum,
         localization: Localization("5 Rue de Thorigny, 75003 Paris", 48.8643, 2.3656),
@@ -240,7 +239,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Château de Vincennes",
-        description: "Un château médiéval fortifié situé à l'est de Paris.",
+        description: "A fortified medieval castle located east of Paris.",
         imagePath: "lib/assets/images/chateau_vincennes.png",
         category: Categories.HistoricalSite,
         localization: Localization("Avenue de Paris, 94300 Vincennes", 48.8502, 2.4365),
@@ -249,8 +248,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Chasse et de la Nature",
-        description: "Musée unique dédié à l'histoire de la chasse et de la nature.",
+        nom: "Museum of Hunting and Nature",
+        description: "Unique museum dedicated to the history of hunting and nature.",
         imagePath: "lib/assets/images/musee_chasse_et_nature.png",
         category: Categories.Museum,
         localization: Localization("62 Rue des Archives, 75003 Paris", 48.8583, 2.3647),
@@ -259,8 +258,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Institut du Monde Arabe",
-        description: "Un centre culturel dédié à la culture arabe et à l'art du monde arabe.",
+        nom: "Arab World Institute",
+        description: "A cultural center dedicated to Arab culture and art from the Arab world.",
         imagePath: "lib/assets/images/institut_monde_arabe.png",
         category: Categories.Museum,
         localization: Localization("1 Rue des Fossés Saint-Bernard, 75005 Paris", 48.8495, 2.3610),
@@ -269,8 +268,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Monnaie de Paris",
-        description: "Musée consacré à l'histoire de la monnaie et à la frappe des pièces de monnaie.",
+        nom: "Paris Mint Museum",
+        description: "Museum dedicated to the history of currency and coin minting.",
         imagePath: "lib/assets/images/musee_monnaie_paris.png",
         category: Categories.Museum,
         localization: Localization("11 Quai de Conti, 75006 Paris", 48.8525, 2.3391),
@@ -279,8 +278,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de l'Orangerie",
-        description: "Musée abritant les célèbres Nymphéas de Claude Monet et d'autres œuvres impressionnistes.",
+        nom: "Orangerie Museum",
+        description: "Museum housing Claude Monet's famous Water Lilies and other Impressionist works.",
         imagePath: "lib/assets/images/musee_orangerie.png",
         category: Categories.Museum,
         localization: Localization("Jardin des Tuileries, 75001 Paris", 48.8638, 2.3215),
@@ -289,8 +288,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Marmottan Monet",
-        description: "Musée d'art impressionniste, célèbre pour ses collections de Claude Monet.",
+        nom: "Marmottan Monet Museum",
+        description: "Impressionist art museum, famous for its Claude Monet collections.",
         imagePath: "lib/assets/images/musee_marmottan_monet.png",
         category: Categories.Museum,
         localization: Localization("2 Rue Louis Boilly, 75016 Paris", 48.8622, 2.2776),
@@ -299,8 +298,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Jacquemart-André",
-        description: "Hôtel particulier transformé en musée, présentant une collection d'art du 18e siècle.",
+        nom: "Jacquemart-André Museum",
+        description: "Private mansion turned into a museum, showcasing 18th-century art collection.",
         imagePath: "lib/assets/images/musee_jacquemart_andre.png",
         category: Categories.Museum,
         localization: Localization("158 Boulevard Haussmann, 75008 Paris", 48.8756, 2.3119),
@@ -309,8 +308,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Guimet",
-        description: "Musée national des arts asiatiques.",
+        nom: "Guimet Museum",
+        description: "National Museum of Asian Arts.",
         imagePath: "lib/assets/images/musee_guimet.png",
         category: Categories.Museum,
         localization: Localization("6 Place d'Iéna, 75116 Paris", 48.8651, 2.2936),
@@ -319,8 +318,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de Cluny",
-        description: "Musée national du Moyen Âge.",
+        nom: "Cluny Museum",
+        description: "National Museum of the Middle Ages.",
         imagePath: "lib/assets/images/musee_cluny.png",
         category: Categories.Museum,
         localization: Localization("28 Rue du Sommerard, 75005 Paris", 48.8505, 2.3443),
@@ -329,8 +328,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée du quai Branly - Jacques Chirac",
-        description: "Musée des arts et civilisations d'Afrique, d'Asie, d'Océanie et des Amériques.",
+        nom: "Quai Branly Museum - Jacques Chirac",
+        description: "Museum of arts and civilizations of Africa, Asia, Oceania, and the Americas.",
         imagePath: "lib/assets/images/musee_quai_branly.png",
         category: Categories.Museum,
         localization: Localization("37 Quai Branly, 75007 Paris", 48.8608, 2.2973),
@@ -339,8 +338,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Nissim de Camondo",
-        description: "Musée d'arts décoratifs du XVIIIe siècle.",
+        nom: "Nissim de Camondo Museum",
+        description: "Museum of 18th-century decorative arts.",
         imagePath: "lib/assets/images/musee_nissim_de_camondo.png",
         category: Categories.Museum,
         localization: Localization("63 Rue de Monceau, 75008 Paris", 48.8796, 2.3149),
@@ -349,8 +348,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Grévin",
-        description: "Célèbre musée de cire présentant des personnalités historiques et contemporaines.",
+        nom: "Grévin Museum",
+        description: "Famous wax museum featuring historical and contemporary personalities.",
         imagePath: "lib/assets/images/musee_grevin.png",
         category: Categories.Museum,
         localization: Localization("10 Boulevard Montmartre, 75009 Paris", 48.8721, 2.3426),
@@ -359,8 +358,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Vie Romantique",
-        description: "Maison-musée dédiée à l'époque romantique du 19e siècle.",
+        nom: "Museum of Romantic Life",
+        description: "House-museum dedicated to the Romantic era of the 19th century.",
         imagePath: "lib/assets/images/musee_vie_romantique.png",
         category: Categories.Museum,
         localization: Localization("16 Rue Chaptal, 75009 Paris", 48.8822, 2.3279),
@@ -369,8 +368,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée des Égouts de Paris",
-        description: "Musée souterrain présentant l'histoire et le fonctionnement des égouts parisiens.",
+        nom: "Paris Sewer Museum",
+        description: "Underground museum showcasing the history and operation of Paris sewers.",
         imagePath: "lib/assets/images/musee_egouts_de_paris.png",
         category: Categories.Museum,
         localization: Localization("Pont de l'Alma, 75007 Paris", 48.8636, 2.3017),
@@ -379,8 +378,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée du Parfum",
-        description: "Musée dédié à l'histoire et à l'art de la parfumerie.",
+        nom: "Perfume Museum",
+        description: "Museum dedicated to the history and art of perfumery.",
         imagePath: "lib/assets/images/musee_parfum.png",
         category: Categories.Museum,
         localization: Localization("9 Rue Scribe, 75009 Paris", 48.8714, 2.3295),
@@ -389,8 +388,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Magie",
-        description: "Musée consacré à l'art de la magie et de l'illusion.",
+        nom: "Magic Museum",
+        description: "Museum dedicated to the art of magic and illusion.",
         imagePath: "lib/assets/images/musee_magie.png",
         category: Categories.Museum,
         localization: Localization("11 Rue Saint-Paul, 75004 Paris", 48.8535, 2.3665),
@@ -399,8 +398,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée des Arts Forains",
-        description: "Musée privé consacré aux arts du spectacle et aux manèges anciens.",
+        nom: "Museum of Fairground Arts",
+        description: "Private museum dedicated to the performing arts and antique carousels.",
         imagePath: "lib/assets/images/musee_arts_forains.png",
         category: Categories.Museum,
         localization: Localization("53 Avenue des Terroirs de France, 75012 Paris", 48.8336, 2.3867),
@@ -409,8 +408,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Bourdelle",
-        description: "Musée dédié à l'œuvre du sculpteur Antoine Bourdelle.",
+        nom: "Bourdelle Museum",
+        description: "Museum dedicated to the work of sculptor Antoine Bourdelle.",
         imagePath: "lib/assets/images/musee_bourdelle.png",
         category: Categories.Museum,
         localization: Localization("18 Rue Antoine Bourdelle, 75015 Paris", 48.8425, 2.3214),
@@ -419,8 +418,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Zadkine",
-        description: "Atelier-musée du sculpteur Ossip Zadkine.",
+        nom: "Zadkine Museum",
+        description: "Studio-museum of sculptor Ossip Zadkine.",
         imagePath: "lib/assets/images/musee_zadkine.png",
         category: Categories.Museum,
         localization: Localization("100 bis Rue d'Assas, 75006 Paris", 48.8424, 2.3304),
@@ -429,8 +428,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Cognacq-Jay",
-        description: "Musée d'art du XVIIIe siècle.",
+        nom: "Cognacq-Jay Museum",
+        description: "18th-century art museum.",
         imagePath: "lib/assets/images/musee_cognac_jay.png",
         category: Categories.Museum,
         localization: Localization("8 Rue Elzévir, 75003 Paris", 48.8586, 2.3625),
@@ -439,8 +438,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Musique",
-        description: "Musée présentant une collection d'instruments de musique et l'histoire de la musique.",
+        nom: "Music Museum",
+        description: "Museum showcasing a collection of musical instruments and the history of music.",
         imagePath: "lib/assets/images/musee_musique.png",
         category: Categories.Museum,
         localization: Localization("221 Avenue Jean Jaurès, 75019 Paris", 48.8890, 2.3935),
@@ -449,8 +448,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de l'Air et de l'Espace",
-        description: "Musée consacré à l'aéronautique et à l'espace.",
+        nom: "Air and Space Museum",
+        description: "Museum dedicated to aeronautics and space.",
         imagePath: "lib/assets/images/musee_air_espace.png",
         category: Categories.Museum,
         localization: Localization("Aéroport de Paris-Le Bourget, 93350 Le Bourget", 48.9472, 2.4372),
@@ -459,8 +458,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Contrefaçon",
-        description: "Musée unique dédié à l'histoire et aux enjeux de la contrefaçon.",
+        nom: "Counterfeiting Museum",
+        description: "Unique museum dedicated to the history and issues of counterfeiting.",
         imagePath: "lib/assets/images/musee_contrefacon.png",
         category: Categories.Museum,
         localization: Localization("16 Rue de la Faisanderie, 75116 Paris", 48.8672, 2.2778),
@@ -469,8 +468,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de l'Éventail",
-        description: "Petit musée spécialisé dans l'art et l'histoire des éventails.",
+        nom: "Fan Museum",
+        description: "Small museum specializing in the art and history of fans.",
         imagePath: "lib/assets/images/musee_eventail.png",
         category: Categories.Museum,
         localization: Localization("2 Boulevard de Strasbourg, 75010 Paris", 48.8697, 2.3553),
@@ -479,8 +478,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Préfecture de Police",
-        description: "Musée dédié à l'histoire de la police et de la sécurité publique.",
+        nom: "Police Prefecture Museum",
+        description: "Museum dedicated to the history of police and public safety.",
         imagePath: "lib/assets/images/musee_prefecture_police.png",
         category: Categories.Museum,
         localization: Localization("4 Rue de la Montagne Sainte-Geneviève, 75005 Paris", 48.8482, 2.3477),
@@ -489,8 +488,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée des Arts et Métiers",
-        description: "Musée présentant l'histoire des inventions, des technologies et des sciences.",
+        nom: "Museum of Arts and Crafts",
+        description: "Museum showcasing the history of inventions, technologies, and sciences.",
         imagePath: "lib/assets/images/musee_arts_et_metiers.png",
         category: Categories.Museum,
         localization: Localization("60 Rue Réaumur, 75003 Paris", 48.8670, 2.3582),
@@ -499,8 +498,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de l'Opéra",
-        description: "Musée consacré à l'histoire de l'Opéra Garnier et à l'art lyrique.",
+        nom: "Opera Museum",
+        description: "Museum dedicated to the history of the Opéra Garnier and lyric art.",
         imagePath: "lib/assets/images/musee_opera.png",
         category: Categories.Museum,
         localization: Localization("8 Rue Scribe, 75009 Paris", 48.8720, 2.3319),
@@ -509,8 +508,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Poupée",
-        description: "Musée consacré aux poupées et aux jouets anciens.",
+        nom: "Doll Museum",
+        description: "Museum dedicated to dolls and antique toys.",
         imagePath: "lib/assets/images/musee_poupee.png",
         category: Categories.Museum,
         localization: Localization("Impasse Berthaud, 75003 Paris", 48.8601, 2.3539),
@@ -520,7 +519,7 @@ class ILocationRepository implements LocationRepository {
       ),
       Location(
         nom: "Cité de la Musique",
-        description: "Centre culturel dédié à la musique, avec des concerts et des expositions.",
+        description: "Cultural center dedicated to music, with concerts and exhibitions.",
         imagePath: "lib/assets/images/cite_musique.png",
         category: Categories.Museum,
         localization: Localization("221 Avenue Jean-Jaurès, 75019 Paris", 48.8877, 2.3945),
@@ -529,8 +528,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée du Chocolat",
-        description: "Musée interactif sur l'histoire du chocolat et des techniques de fabrication.",
+        nom: "Chocolate Museum",
+        description: "Interactive museum on the history of chocolate and manufacturing techniques.",
         imagePath: "lib/assets/images/musee_chocolat.png",
         category: Categories.Museum,
         localization: Localization("28 Boulevard de Bonne Nouvelle, 75010 Paris", 48.8690, 2.3470),
@@ -539,8 +538,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Santé des Armées",
-        description: "Musée présentant l'histoire de la médecine militaire et des soins de santé dans les armées.",
+        nom: "Museum of Military Health",
+        description: "Museum presenting the history of military medicine and healthcare in the armed forces.",
         imagePath: "lib/assets/images/musee_sante_armees.png",
         category: Categories.Museum,
         localization: Localization("1 Place Alphonse Laveran, 75005 Paris", 48.8410, 2.3414),
@@ -549,8 +548,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Curie",
-        description: "Musée dédié à l'histoire des découvertes scientifiques de Marie Curie.",
+        nom: "Curie Museum",
+        description: "Museum dedicated to the history of Marie Curie's scientific discoveries.",
         imagePath: "lib/assets/images/musee_curie.png",
         category: Categories.Museum,
         localization: Localization("1 Rue Pierre et Marie Curie, 75005 Paris", 48.8447, 2.3449),
@@ -559,8 +558,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée du Luxembourg",
-        description: "Musée exposant des œuvres d'art classique et moderne.",
+        nom: "Luxembourg Museum",
+        description: "Museum exhibiting classical and modern art works.",
         imagePath: "lib/assets/images/musee_luxembourg.png",
         category: Categories.Museum,
         localization: Localization("19 Rue de Vaugirard, 75006 Paris", 48.8440, 2.3346),
@@ -569,8 +568,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée des Arts Décoratifs",
-        description: "Musée dédié à l'art décoratif et aux objets du quotidien.",
+        nom: "Museum of Decorative Arts",
+        description: "Museum dedicated to decorative arts and everyday objects.",
         imagePath: "lib/assets/images/musee_arts_decoratifs.png",
         category: Categories.Museum,
         localization: Localization("107 Rue de Rivoli, 75001 Paris", 48.8636, 2.3350),
@@ -579,8 +578,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée du Petit Palais",
-        description: "Musée abritant une collection d'art du XIXe siècle.",
+        nom: "Petit Palais Museum",
+        description: "Museum housing a collection of 19th-century art.",
         imagePath: "lib/assets/images/musee_petit_palais.png",
         category: Categories.Museum,
         localization: Localization("Avenue Winston Churchill, 75008 Paris", 48.8664, 2.3122),
@@ -589,8 +588,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Cité de l'Architecture et du Patrimoine",
-        description: "Musée qui présente l'architecture et le patrimoine de la France.",
+        nom: "Museum of Architecture and Heritage",
+        description: "Museum showcasing the architecture and heritage of France.",
         imagePath: "lib/assets/images/musee_architecture_patrimoine.png",
         category: Categories.Museum,
         localization: Localization("1 Place du Trocadéro et du 11 Novembre, 75116 Paris", 48.8637, 2.2901),
@@ -599,8 +598,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Police",
-        description: "Musée consacré à l'histoire de la police à travers les siècles.",
+        nom: "Police Museum",
+        description: "Museum dedicated to the history of police through the centuries.",
         imagePath: "lib/assets/images/musee_prefecture_police.png",
         category: Categories.Museum,
         localization: Localization("4 Rue de la Montagne Sainte-Geneviève, 75005 Paris", 48.8482, 2.3477),
@@ -609,8 +608,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Cernuschi",
-        description: "Musée des Arts de l'Asie de la ville de Paris.",
+        nom: "Cernuschi Museum",
+        description: "Museum of Asian Arts of the City of Paris.",
         imagePath: "lib/assets/images/musee_cernuschi.png",
         category: Categories.Museum,
         localization: Localization("7 Avenue Velasquez, 75008 Paris", 48.8794, 2.3122),
@@ -619,8 +618,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de la Vie Romantique",
-        description: "Maison-musée dédiée à l'époque romantique du 19e siècle.",
+        nom: "Museum of Romantic Life",
+        description: "House-museum dedicated to the Romantic era of the 19th century.",
         imagePath: "lib/assets/images/musee_vie_romantique.png",
         category: Categories.Museum,
         localization: Localization("16 Rue Chaptal, 75009 Paris", 48.8822, 2.3279),
@@ -629,8 +628,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée Carnavalet",
-        description: "Musée de l'histoire de Paris, de la préhistoire à nos jours.",
+        nom: "Carnavalet Museum",
+        description: "Museum of the history of Paris, from prehistory to the present day.",
         imagePath: "lib/assets/images/musee_carnavalet.png",
         category: Categories.Museum,
         localization: Localization("23 Rue de Sévigné, 75003 Paris", 48.8570, 2.3624),
@@ -639,8 +638,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de Montmartre",
-        description: "Musée dédié à l'histoire et à la culture du quartier de Montmartre.",
+        nom: "Montmartre Museum",
+        description: "Museum dedicated to the history and culture of the Montmartre district.",
         imagePath: "lib/assets/images/musee_montmartre.png",
         category: Categories.Museum,
         localization: Localization("12 Rue Cortot, 75018 Paris", 48.8876, 2.3384),
@@ -649,8 +648,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée de l'Homme",
-        description: "Musée d'anthropologie situé dans le Palais de Chaillot.",
+        nom: "Museum of Man",
+        description: "Anthropology museum located in the Palais de Chaillot.",
         imagePath: "lib/assets/images/musee_homme.png",
         category: Categories.Museum,
         localization: Localization("17 Place du Trocadéro, 75116 Paris", 48.8619, 2.2867),
@@ -659,8 +658,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Muséenational Eugène Delacroix",
-        description: "Musée dédié au peintre Eugène Delacroix.",
+        nom: "Eugène Delacroix National Museum",
+        description: "Museum dedicated to painter Eugène Delacroix.",
         imagePath: "lib/assets/images/musee_eugene_delacroix.png",
         category: Categories.Museum,
         localization: Localization("6 Rue de Furstenberg, 75006 Paris", 48.8547, 2.3344),
@@ -669,8 +668,8 @@ class ILocationRepository implements LocationRepository {
         website: null,
       ),
       Location(
-        nom: "Musée national Gustave Moreau",
-        description:        "Musée consacré à l'œuvre du peintre symboliste Gustave Moreau.",
+        nom: "Gustave Moreau National Museum",
+        description: "Museum dedicated to the work of symbolist painter Gustave Moreau.",
         imagePath: "lib/assets/images/musee_gustave_moreau.png",
         category: Categories.Museum,
         localization: Localization("14 Rue de la Rochefoucauld, 75009 Paris", 48.8788, 2.3337),
@@ -683,4 +682,3 @@ class ILocationRepository implements LocationRepository {
     return locations;
   }
 }
-

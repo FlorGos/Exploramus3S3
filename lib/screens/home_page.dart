@@ -131,17 +131,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Félicitations !'),
-          content: Text('Vous avez vu tous les lieux ! Voulez-vous réinitialiser et recommencer ?'),
+          title: Text('Congratulations !'),
+          content: Text('You have visited all locations. Do you want to reset the list?'),
           actions: <Widget>[
             TextButton(
-              child: Text('Non'),
+              child: Text('No'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('Oui'),
+              child: Text('Yes'),
               onPressed: () {
                 Navigator.of(context).pop();
                 _resetLocations();
@@ -254,7 +254,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    'Catégorie: ${location.category.toString().split('.').last}',
+                                    'Category: ${location.category.toString().split('.').last}',
                                     style: TextStyle(color: Colors.white70, fontSize: 16),
                                   ),
                                 ],
@@ -355,7 +355,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => NFCPage()),
+                        MaterialPageRoute(builder: (context) => PageNFC()),
                       );
                     },
                   ),
@@ -365,7 +365,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                       await _locationManager.saveState(); // Save state before navigating
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SelectPage(title: 'Sélection')),
+                        MaterialPageRoute(builder: (context) => SelectPage(title: 'Selection')),
                       ).then((_) => _loadLocations()); // Reload locations after returning
                     },
                   ),
@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
               ),
               Expanded(
                 child: _locations.isEmpty
-                    ? Center(child: Text('Aucun lieu disponible'))
+                    ? Center(child: Text('No locations found'))
                     : Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: _buildLocationCard(_locations[_currentIndex]),
@@ -393,10 +393,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildActionButton(Icons.thumb_down, 'Pas intéressé', Colors.red, _handleDislike),
-                    _buildActionButton(Icons.undo, 'Retour', Colors.orange, _actionHistory.isNotEmpty ? _handleUndo : null),
-                    _buildActionButton(Icons.thumb_up, 'Intéressé', Colors.green, _handleLike),
-                    _buildActionButton(Icons.star, 'Favori', Colors.blue, _handleFavorite),
+                    _buildActionButton(Icons.thumb_down, 'Not Interested', Colors.red, _handleDislike),
+                    _buildActionButton(Icons.undo, 'Return', Colors.orange, _actionHistory.isNotEmpty ? _handleUndo : null),
+                    _buildActionButton(Icons.thumb_up, 'Like', Colors.green, _handleLike),
+                    _buildActionButton(Icons.star, 'Favorite', Colors.blue, _handleFavorite),
                   ],
                 ),
               ),

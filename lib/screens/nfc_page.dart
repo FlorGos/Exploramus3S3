@@ -2,83 +2,83 @@ import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class NFCPage extends StatefulWidget {
+class PageNFC extends StatefulWidget {
   @override
-  _NFCPageState createState() => _NFCPageState();
+  _EtatPageNFC createState() => _EtatPageNFC();
 }
 
-class _NFCPageState extends State<NFCPage> {
-  bool isScanning = false;
-  String scannedCardId = '';
+class _EtatPageNFC extends State<PageNFC> {
+  bool estEnScan = false;
+  String idCarteScannee = '';
 
   @override
   void initState() {
     super.initState();
-    _checkNfcAvailability();
-    _loadScannedCard();
+    _verifierDisponibiliteNfc();
+    _chargerCarteScannee();
   }
 
-  Future<void> _checkNfcAvailability() async {
-    bool isAvailable = await NfcManager.instance.isAvailable();
-    if (!isAvailable) {
-      _showAlert('NFC non disponible', 'Votre appareil ne supporte pas le NFC ou il est désactivé.');
+  Future<void> _verifierDisponibiliteNfc() async {
+    bool estDisponible = await NfcManager.instance.isAvailable();
+    if (!estDisponible) {
+      _afficherAlerte('NFC non disponible', 'Votre appareil ne supporte pas le NFC ou il est désactivé.');
     }
   }
 
-  Future<void> _startNfcScan() async {
+  Future<void> _demarrerScanNfc() async {
     setState(() {
-      isScanning = true;
+      estEnScan = true;
     });
 
     try {
       await NfcManager.instance.startSession(
-        onDiscovered: (NfcTag tag) async {
-          var id = tag.data['nfca']?['identifier'];
+        onDiscovered: (NfcTag etiquette) async {
+          var id = etiquette.data['nfca']?['identifier'];
           if (id != null) {
-            String cardId = id.map((e) => e.toRadixString(16).padLeft(2, '0')).join(':');
-            print('Carte scannée : $cardId');
+            String idCarte = id.map((e) => e.toRadixString(16).padLeft(2, '0')).join(':');
+            print('Carte scannée : $idCarte');
             setState(() {
-              scannedCardId = cardId;
-              _saveScannedCard();
+              idCarteScannee = idCarte;
+              _sauvegarderCarteScannee();
             });
           }
           await NfcManager.instance.stopSession();
           setState(() {
-            isScanning = false;
+            estEnScan = false;
           });
         },
       );
     } catch (e) {
-      _showAlert('Erreur', 'Une erreur est survenue lors du scan NFC.');
+      _afficherAlerte('Erreur', 'Une erreur est survenue lors du scan NFC.');
     }
   }
 
-  Future<void> _loadScannedCard() async {
+  Future<void> _chargerCarteScannee() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      scannedCardId = prefs.getString('scannedCardId') ?? '';
+      idCarteScannee = prefs.getString('idCarteScannee') ?? '';
     });
   }
 
-  Future<void> _saveScannedCard() async {
+  Future<void> _sauvegarderCarteScannee() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('scannedCardId', scannedCardId);
+    await prefs.setString('idCarteScannee', idCarteScannee);
   }
 
-  Future<void> _deleteScannedCard() async {
+  Future<void> _supprimerCarteScannee() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('scannedCardId');
+    await prefs.remove('idCarteScannee');
     setState(() {
-      scannedCardId = '';
+      idCarteScannee = '';
     });
   }
 
-  void _showAlert(String title, String message) {
+  void _afficherAlerte(String titre, String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
+          title: Text(titre),
           content: Text(message),
           actions: <Widget>[
             TextButton(
@@ -97,20 +97,20 @@ class _NFCPageState extends State<NFCPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('NFC Scanner'),
+        title: Text('Scanner NFC'),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (scannedCardId.isNotEmpty)
+            if (idCarteScannee.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
                     Text('Carte scannée', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     SizedBox(height: 8),
-                    Text('ID: $scannedCardId'),
+                    Text('ID: $idCarteScannee'),
                     SizedBox(height: 16),
                     Container(
                       padding: EdgeInsets.all(16),
@@ -119,11 +119,11 @@ class _NFCPageState extends State<NFCPage> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
-                      child: Text(scannedCardId),
+                      child: Text(idCarteScannee),
                     ),
                     SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: _deleteScannedCard,
+                      onPressed: _supprimerCarteScannee,
                       child: Text('Supprimer la carte'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                     ),
@@ -133,8 +133,8 @@ class _NFCPageState extends State<NFCPage> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
-                onPressed: isScanning ? null : _startNfcScan,
-                child: Text(isScanning ? 'Scan en cours...' : 'Scanner une carte NFC'),
+                onPressed: estEnScan ? null : _demarrerScanNfc,
+                child: Text(estEnScan ? 'Scan en cours...' : 'Scanner une carte NFC'),
               ),
             ),
           ],

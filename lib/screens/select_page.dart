@@ -108,15 +108,15 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Autorisations nécessaires'),
-          content: Text('Cette application nécessite des autorisations pour fonctionner.'),
+          title: Text('Permissions Required'),
+          content: Text('This app requires permissions to function.'),
           actions: <Widget>[
             TextButton(
-              child: Text('Quitter'),
+              child: Text('Quit'),
               onPressed: () => SystemNavigator.pop(),
             ),
             TextButton(
-              child: Text('Accorder'),
+              child: Text('Grant'),
               onPressed: () async {
                 Navigator.of(context).pop();
                 bool granted = await _checkPermissions();
@@ -137,17 +137,17 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Permissions requises'),
-          content: Text('Vous devez accorder les permissions pour utiliser cette fonctionnalité. Voulez-vous accéder aux paramètres de l\'application ?'),
+          title: Text('Permissions Required'),
+          content: Text('You need to grant permissions to use this feature. Do you want to open the app settings?'),
           actions: <Widget>[
             TextButton(
-              child: Text('Annuler'),
+              child: Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('Ouvrir les paramètres'),
+              child: Text('Open Settings'),
               onPressed: () async {
                 Navigator.of(context).pop();
                 await AppSettings.openAppSettings();
@@ -268,11 +268,11 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Permissions nécessaires', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Permissions Required', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _checkPermissionsAndProceed,
-                child: Text('Vérifier les permissions'),
+                child: Text('Check Permissions'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
@@ -309,11 +309,11 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
                     const PopupMenuItem<SortOption>(
                       value: SortOption.NameAZ,
-                      child: Text('Nom A-Z'),
+                      child: Text('Name A-Z'),
                     ),
                     const PopupMenuItem<SortOption>(
                       value: SortOption.NameZA,
-                      child: Text('Nom Z-A'),
+                      child: Text('Name Z-A'),
                     ),
                     const PopupMenuItem<SortOption>(
                       value: SortOption.TypeAZ,
@@ -325,7 +325,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                     ),
                     const PopupMenuItem<SortOption>(
                       value: SortOption.Proximity,
-                      child: Text('Par proximité'),
+                      child: Text('By Proximity'),
                     ),
                   ],
                 );
@@ -334,8 +334,8 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
           ],
           bottom: TabBar(
             tabs: [
-              Tab(text: 'Lieux likés'),
-              Tab(text: 'Favoris'),
+              Tab(text: 'Liked Places'),
+              Tab(text: 'Favorites'),
             ],
           ),
         ),
@@ -354,9 +354,9 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
 
             context.go('/planningpage', extra: selectedLocations);
           },
-          tooltip: 'Créer un plan',
+          tooltip: 'Create a plan',
           icon: Icon(Icons.map),
-          label: Text('Créer un plan'),
+          label: Text('Create a plan'),
           backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
         ),
@@ -383,7 +383,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                 });
               },
               decoration: InputDecoration(
-                labelText: 'Rechercher',
+                labelText: 'Search',
                 suffixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -437,7 +437,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
             child: Column(
               children: [
                 Text(
-                  'Distance maximale : ${isLikedTab ? (maxDistanceLiked == double.infinity ? "Illimité" : "${(maxDistanceLiked / 1000).toStringAsFixed(1)} km") : (maxDistanceFavorite == double.infinity ? "Illimité" : "${(maxDistanceFavorite / 1000).toStringAsFixed(1)} km")}',
+                  'Maximum distance: ${isLikedTab ? (maxDistanceLiked == double.infinity ? "Unlimited" : "${(maxDistanceLiked / 1000).toStringAsFixed(1)} km") : (maxDistanceFavorite == double.infinity ? "Unlimited" : "${(maxDistanceFavorite / 1000).toStringAsFixed(1)} km")}',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 SliderTheme(
@@ -457,8 +457,8 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
                     max: 100000,
                     divisions: 100,
                     label: isLikedTab
-                        ? (maxDistanceLiked == double.infinity ? 'Illimité' : '${(maxDistanceLiked / 1000).toStringAsFixed(1)} km')
-                        : (maxDistanceFavorite == double.infinity ? 'Illimité' : '${(maxDistanceFavorite / 1000).toStringAsFixed(1)} km'),
+                        ? (maxDistanceLiked == double.infinity ? 'Unlimited' : '${(maxDistanceLiked / 1000).toStringAsFixed(1)} km')
+                        : (maxDistanceFavorite == double.infinity ? 'Unlimited' : '${(maxDistanceFavorite / 1000).toStringAsFixed(1)} km'),
                     onChanged: (value) {
                       setState(() {
                         if (isLikedTab) {
@@ -475,7 +475,7 @@ class _SelectPageState extends State<SelectPage> with SingleTickerProviderStateM
             ),
           ),
           CheckboxListTile(
-            title: Text('Sélectionner/Désélectionner tout', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: Text('Select/Deselect All', style: TextStyle(fontWeight: FontWeight.bold)),
             value: locations.isNotEmpty && locations.every((location) => plans[location] == true),
             onChanged: locations.isEmpty ? null : (value) => _toggleAllLocations(value, isLikedTab),
             activeColor: Theme.of(context).primaryColor,

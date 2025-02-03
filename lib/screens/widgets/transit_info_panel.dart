@@ -6,7 +6,7 @@ class TransitRoute {
   final String direction;
   final String startStation;
   final String endStation;
-  final int duration; // en minutes
+  final int duration; // in minutes
 
   TransitRoute({
     required this.type,
@@ -64,7 +64,7 @@ class TransitInfoPanel extends StatelessWidget {
   String _getTransitTypeName(String type) {
     switch (type) {
       case 'metro':
-        return 'Métro';
+        return 'Metro';
       case 'bus':
         return 'Bus';
       case 'rer':
@@ -86,7 +86,7 @@ class TransitInfoPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            title: Text('Transports en commun'),
+            title: Text('Public Transport'),
             trailing: IconButton(
               icon: Icon(Icons.close),
               onPressed: onClose,
@@ -107,9 +107,9 @@ class TransitInfoPanel extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Direction: ${route.direction}'),
-                      Text('De: ${route.startStation}'),
-                      Text('À: ${route.endStation}'),
-                      Text('Durée: ${route.duration} min'),
+                      Text('From: ${route.startStation}'),
+                      Text('To: ${route.endStation}'),
+                      Text('Duration: ${route.duration} min'),
                     ],
                   ),
                 );

@@ -10,35 +10,35 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paramètres'),
+        title: const Text('Settings'),
       ),
       body: ListView(
         children: [
           SwitchListTile(
-            title: const Text('Mode Sombre'),
+            title: const Text('Dark Mode'),
             value: Provider.of<ThemeProvider>(context).getThemeMode() == ThemeMode.dark,
             onChanged: (value) {
               Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
             },
           ),
           ListTile(
-            title: Text('Réinitialiser les lieux likés'),
+            title: Text('Reset Liked Places'),
             trailing: ElevatedButton(
-              child: Text('Réinitialiser'),
+              child: Text('Reset'),
               onPressed: () async {
                 bool? confirm = await showDialog<bool>(
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
                       title: Text('Confirmation'),
-                      content: Text('Êtes-vous sûr de vouloir réinitialiser la liste des lieux likés ?'),
+                      content: Text('Are you sure you want to reset the list of liked places?'),
                       actions: <Widget>[
                         TextButton(
-                          child: Text('Annuler'),
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.of(context).pop(false),
                         ),
                         TextButton(
-                          child: Text('Réinitialiser'),
+                          child: Text('Reset'),
                           onPressed: () => Navigator.of(context).pop(true),
                         ),
                       ],
@@ -49,30 +49,30 @@ class SettingsPage extends StatelessWidget {
                 if (confirm == true) {
                   await Provider.of<LocationManager>(context, listen: false).resetLikedLocations();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('La liste des lieux likés a été réinitialisée')),
+                    SnackBar(content: Text('The list of liked places has been reset')),
                   );
                 }
               },
             ),
           ),
           ListTile(
-            title: Text('Réinitialiser les lieux dislikés'),
+            title: Text('Reset Disliked Places'),
             trailing: ElevatedButton(
-              child: Text('Réinitialiser'),
+              child: Text('Reset'),
               onPressed: () async {
                 bool? confirm = await showDialog<bool>(
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
                       title: Text('Confirmation'),
-                      content: Text('Êtes-vous sûr de vouloir réinitialiser la liste des lieux dislikés ?'),
+                      content: Text('Are you sure you want to reset the list of disliked places?'),
                       actions: <Widget>[
                         TextButton(
-                          child: Text('Annuler'),
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.of(context).pop(false),
                         ),
                         TextButton(
-                          child: Text('Réinitialiser'),
+                          child: Text('Reset'),
                           onPressed: () => Navigator.of(context).pop(true),
                         ),
                       ],
@@ -83,30 +83,30 @@ class SettingsPage extends StatelessWidget {
                 if (confirm == true) {
                   await Provider.of<LocationManager>(context, listen: false).resetDislikedLocations();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('La liste des lieux dislikés a été réinitialisée')),
+                    SnackBar(content: Text('The list of disliked places has been reset')),
                   );
                 }
               },
             ),
           ),
           ListTile(
-            title: Text('Réinitialiser les lieux favoris'),
+            title: Text('Reset Favorite Places'),
             trailing: ElevatedButton(
-              child: Text('Réinitialiser'),
+              child: Text('Reset'),
               onPressed: () async {
                 bool? confirm = await showDialog<bool>(
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
                       title: Text('Confirmation'),
-                      content: Text('Êtes-vous sûr de vouloir réinitialiser la liste des lieux favoris ?'),
+                      content: Text('Are you sure you want to reset the list of favorite places?'),
                       actions: <Widget>[
                         TextButton(
-                          child: Text('Annuler'),
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.of(context).pop(false),
                         ),
                         TextButton(
-                          child: Text('Réinitialiser'),
+                          child: Text('Reset'),
                           onPressed: () => Navigator.of(context).pop(true),
                         ),
                       ],
@@ -117,7 +117,7 @@ class SettingsPage extends StatelessWidget {
                 if (confirm == true) {
                   await Provider.of<LocationManager>(context, listen: false).resetFavoriteLocations();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('La liste des lieux favoris a été réinitialisée')),
+                    SnackBar(content: Text('The list of favorite places has been reset')),
                   );
                 }
               },

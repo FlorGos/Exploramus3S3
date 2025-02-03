@@ -39,7 +39,7 @@ class _AddMarkerDialogState extends State<AddMarkerDialog> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la recherche: $e')),
+        SnackBar(content: Text('Error during search: $e')),
       );
     }
   }
@@ -54,7 +54,7 @@ class _AddMarkerDialogState extends State<AddMarkerDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Ajouter un marqueur',
+              'Add a marker',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             SizedBox(height: 16),
@@ -63,15 +63,15 @@ class _AddMarkerDialogState extends State<AddMarkerDialog> {
                 Navigator.pop(context);
                 widget.onMapSelection(LatLng(0, 0)); // Temporary coordinates
               },
-              child: Text('Sélectionner sur la carte'),
+              child: Text('Select on map'),
             ),
             SizedBox(height: 16),
-            Text('Ou rechercher une adresse:'),
+            Text('Or search for an address:'),
             SizedBox(height: 8),
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Entrez une adresse...',
+                hintText: 'Enter an address...',
                 suffixIcon: IconButton(
                   icon: Icon(Icons.search),
                   onPressed: () => _searchAddress(_searchController.text),

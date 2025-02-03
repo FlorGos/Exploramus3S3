@@ -112,9 +112,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           delay: Duration(milliseconds: 10)
       );
     } catch (e) {
-      print('Impossible de prendre une capture d écran: $e');
+      print('Unable to take a screenshot: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la capture d\'écran')),
+        SnackBar(content: Text('Error capturing screenshot')),
       );
       return;
     }
@@ -129,12 +129,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             imageBytes = data.buffer.asUint8List();
           }
         } catch (e) {
-          print('Impossible de charger limage de : ${location.nom}: $e');
+          print('Unable to load image for: ${location.nom}: $e');
           try {
             ByteData placeholderData = await rootBundle.load('assets/placeholder.png');
             imageBytes = placeholderData.buffer.asUint8List();
           } catch (e) {
-            print('Impossible de charger limage de : $e');
+            print('Unable to load image: $e');
           }
         }
         return LocationWithImage(location: location, imageBytes: imageBytes);
@@ -226,18 +226,18 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       try {
         return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
       } catch (e) {
-        print('Impossible de charger l image de : $e');
+        print('Unable to load image: $e');
         return Uint8List(0);
       }
     }
     try {
       return await rootBundle.load(imagePath).then((data) => data.buffer.asUint8List());
     } catch (e) {
-      print('Impossible de charger limage de : $e');
+      print('Unable to load image: $e');
       try {
         return await rootBundle.load('assets/placeholder.png').then((data) => data.buffer.asUint8List());
       } catch (e) {
-        print('Impossible de charger limage de : $e');
+        print('Unable to load image: $e');
         return Uint8List(0);
       }
     }
@@ -334,7 +334,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
         if (routes.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Aucun itinéraire trouvé pour cette destination.')),
+            SnackBar(content: Text('No route found for this destination.')),
           );
           return;
         }
@@ -347,13 +347,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Veuillez sélectionner une destination.')),
+          SnackBar(content: Text('Please select a destination.')),
         );
       }
     } catch (e) {
       print('Error fetching transit routes: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la recherche d\'itinéraire. Veuillez réessayer.')),
+        SnackBar(content: Text('Error while searching for a route. Please try again.')),
       );
     } finally {
       setState(() {
@@ -465,7 +465,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _updateBasicPolylinePoints();
     _updateRouteForSelectedMode();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Marqueurs réinitialisés'), backgroundColor: Theme.of(context).primaryColor),
+      SnackBar(content: Text('Marker reintialized '), backgroundColor: Theme.of(context).primaryColor),
     );
   }
 
@@ -671,7 +671,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Tapez sur la carte pour ajouter un marqueur'),
+                content: Text('Tap on the map to add a new marker'),
                 duration: Duration(seconds: 2),
                 backgroundColor: Theme.of(context).primaryColor,
               ),
@@ -844,7 +844,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
           return [
             pw.Header(
               level: 0,
-              child: pw.Text('Lieux visités',
+              child: pw.Text('Visited Locations',
                   style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)
               ),
             ),
@@ -854,7 +854,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 pw.Text(locationWithImage.location.nom,
                     style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)
                 ),
-                pw.Text('Adresse: ${locationWithImage.location.localization.adress ?? "Non spécifiée"}'),
+                pw.Text('Adress: ${locationWithImage.location.localization.adress ?? "Not Specified"}'),
                 pw.Text('Description: ${locationWithImage.location.description ?? "Aucune description"}'),
                 if (locationWithImage.hasValidImage)
                   pw.Image(pw.MemoryImage(locationWithImage.imageBytes!)),
