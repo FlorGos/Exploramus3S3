@@ -8,16 +8,14 @@ class NFCPage extends StatefulWidget {
 }
 
 class _NFCPageState extends State<NFCPage> {
-  List<String> scannedCards = [];
   bool isScanning = false;
-  String navigoId = '';
+  String scannedCardId = '';
 
   @override
   void initState() {
     super.initState();
     _checkNfcAvailability();
-    _loadNavigoId();
-    _loadScannedCards();
+    _loadScannedCard();
   }
 
   Future<void> _checkNfcAvailability() async {
@@ -40,10 +38,8 @@ class _NFCPageState extends State<NFCPage> {
             String cardId = id.map((e) => e.toRadixString(16).padLeft(2, '0')).join(':');
             print('Carte scannée : $cardId');
             setState(() {
-              if (!scannedCards.contains(cardId)) {
-                scannedCards.add(cardId);
-                _saveScannedCards();
-              }
+              scannedCardId = cardId;
+              _saveScannedCard();
             });
           }
           await NfcManager.instance.stopSession();
@@ -57,46 +53,24 @@ class _NFCPageState extends State<NFCPage> {
     }
   }
 
-  Future<void> _loadNavigoId() async {
+  Future<void> _loadScannedCard() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      navigoId = prefs.getString('navigoId') ?? '';
+      scannedCardId = prefs.getString('scannedCardId') ?? '';
     });
   }
 
-  Future<void> _saveNavigoId(String id) async {
+  Future<void> _saveScannedCard() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('navigoId', id);
-    setState(() {
-      navigoId = id;
-    });
+    await prefs.setString('scannedCardId', scannedCardId);
   }
 
-  Future<void> _deleteNavigoId() async {
+  Future<void> _deleteScannedCard() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('navigoId');
+    await prefs.remove('scannedCardId');
     setState(() {
-      navigoId = '';
+      scannedCardId = '';
     });
-  }
-
-  Future<void> _loadScannedCards() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      scannedCards = prefs.getStringList('scannedCards') ?? [];
-    });
-  }
-
-  Future<void> _saveScannedCards() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('scannedCards', scannedCards);
-  }
-
-  Future<void> _deleteScannedCard(String cardId) async {
-    setState(() {
-      scannedCards.remove(cardId);
-    });
-    await _saveScannedCards();
   }
 
   void _showAlert(String title, String message) {
@@ -123,74 +97,48 @@ class _NFCPageState extends State<NFCPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('NFC et Navigo'),
+        title: Text('NFC Scanner'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: scannedCards.length,
-              itemBuilder: (context, index) {
-                return Dismissible(
-                  key: Key(scannedCards[index]),
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: EdgeInsets.only(right: 20.0),
-                    child: Icon(Icons.delete, color: Colors.white),
-                  ),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (direction) {
-                    _deleteScannedCard(scannedCards[index]);
-                  },
-                  child: ListTile(
-                    title: Text('Carte ${index + 1}'),
-                    subtitle: Text(scannedCards[index]),
-                    leading: Icon(Icons.credit_card),
-                    trailing: IconButton(
-                      icon: Icon(Icons.save),
-                      onPressed: () => _saveNavigoId(scannedCards[index]),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (scannedCardId.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Text('Carte scannée', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    Text('ID: $scannedCardId'),
+                    SizedBox(height: 16),
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Text(scannedCardId),
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
-          if (navigoId.isNotEmpty)
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _deleteScannedCard,
+                      child: Text('Supprimer la carte'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text('Votre Pass Navigo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  Text('ID: $navigoId'),
-                  SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Text(navigoId),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _deleteNavigoId,
-                    child: Text('Supprimer le Pass Navigo'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  ),
-                ],
+              child: ElevatedButton(
+                onPressed: isScanning ? null : _startNfcScan,
+                child: Text(isScanning ? 'Scan en cours...' : 'Scanner une carte NFC'),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: isScanning ? null : _startNfcScan,
-              child: Text(isScanning ? 'Scan en cours...' : 'Scanner une carte NFC'),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
