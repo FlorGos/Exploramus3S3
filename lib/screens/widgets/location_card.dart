@@ -20,7 +20,7 @@ class LocationCard extends StatelessWidget {
             child: Column(
               children: [
                 Image.network(
-                  location.photoUrl ?? "",
+                  location.imagePath ?? "",
                   width: MediaQuery.of(context).size.width,
                   height: MediaQuery.of(context).size.height / 3,
                 ),
