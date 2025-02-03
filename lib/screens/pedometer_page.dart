@@ -39,9 +39,22 @@ class _PedometerPageState extends State<PedometerPage> {
         _distanceKm = _dailySteps * 0.0007;
         _caloriesBurned = (_dailySteps * 0.04).round();
         _activityTime = Duration(minutes: (_dailySteps * 0.01).round());
+
+        // Mise à jour des données hebdomadaires et mensuelles
+        _updateWeeklyAndMonthlyData();
       });
       _saveStepData();
     }
+  }
+
+  // Ajoutez cette nouvelle méthode
+  void _updateWeeklyAndMonthlyData() {
+    final now = DateTime.now();
+    final todayIndex = now.weekday - 1; // 0 pour lundi, 6 pour dimanche
+    final dayOfMonth = now.day - 1; // 0 pour le premier jour du mois
+
+    _weeklySteps[todayIndex] = _dailySteps;
+    _monthlySteps[dayOfMonth] = _dailySteps;
   }
 
   Future<void> _requestPermissions() async {
@@ -161,14 +174,14 @@ class _PedometerPageState extends State<PedometerPage> {
     final monthStart = DateTime(now.year, now.month, 1);
 
     final List<int> weeklySteps = List.filled(7, 0);
-    final List<int> monthlySteps = List.filled(30, 0);
+    final List<int> monthlySteps = List.filled(now.daysInMonth, 0);
 
     for (int i = 0; i < 7; i++) {
       final date = weekStart.add(Duration(days: i));
       weeklySteps[i] = await _getStepsForDate(date);
     }
 
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < now.daysInMonth; i++) {
       final date = monthStart.add(Duration(days: i));
       monthlySteps[i] = await _getStepsForDate(date);
     }
@@ -365,6 +378,9 @@ class _PedometerPageState extends State<PedometerPage> {
   }
 
   Widget _buildMonthlyChart() {
+    final now = DateTime.now();
+    final daysInMonth = now.daysInMonth;
+
     return Card(
       elevation: 4,
       child: Padding(
@@ -388,9 +404,9 @@ class _PedometerPageState extends State<PedometerPage> {
                         showTitles: true,
                         reservedSize: 22,
                         getTitlesWidget: (double value, TitleMeta meta) {
-                          if (value % 5 == 0) {
+                          if (value % 5 == 0 && value < daysInMonth) {
                             return Text(
-                              value.toInt().toString(),
+                              (value + 1).toInt().toString(),
                               style: const TextStyle(
                                 color: Color(0xff68737d),
                                 fontWeight: FontWeight.bold,
@@ -417,7 +433,7 @@ class _PedometerPageState extends State<PedometerPage> {
                     border: Border.all(color: const Color(0xff37434d), width: 1),
                   ),
                   minX: 0,
-                  maxX: 29,
+                  maxX: daysInMonth - 1,
                   minY: 0,
                   maxY: _monthlySteps.reduce((a, b) => a > b ? a : b).toDouble() + 1,
                   lineBarsData: [
@@ -531,6 +547,12 @@ class _PedometerPageState extends State<PedometerPage> {
     FlutterForegroundTask.stopService();
     _database?.close();
     super.dispose();
+  }
+}
+
+extension DateTimeExtension on DateTime {
+  int get daysInMonth {
+    return DateTime(this.year, this.month + 1, 0).day;
   }
 }
 
