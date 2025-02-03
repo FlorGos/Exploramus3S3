@@ -28,6 +28,8 @@ import 'package:printing/printing.dart';
 import 'package:screenshot/screenshot.dart';
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng userPosition;
@@ -99,7 +101,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     // Capture map screenshot
     Uint8List? mapImageBytes;
     try {
-      mapImageBytes = await screenshotController.capture();
+      mapImageBytes = await screenshotController.capture(pixelRatio: 3.0);
     } catch (e) {
       print('Failed to capture screenshot: $e');
     }
@@ -762,6 +764,30 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _saveScreenshot() async {
+    try {
+      // Attendre que le widget soit complètement rendu
+      await Future.delayed(Duration(milliseconds: 500));
+
+      final Uint8List? imageBytes = await screenshotController.capture(pixelRatio: 3.0);
+      if (imageBytes != null) {
+        final directory = await getApplicationDocumentsDirectory();
+        final imagePath = await File('${directory.path}/map_screenshot.png').create();
+        await imagePath.writeAsBytes(imageBytes);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Screenshot saved successfully')),
+        );
+      } else {
+        throw Exception('Failed to capture screenshot');
+      }
+    } catch (e) {
+      print('Error saving screenshot: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save screenshot: $e')),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -894,7 +920,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                     elevation: 4,
                     mini: true,
                   ),
-
                 ],
               ],
             ),
