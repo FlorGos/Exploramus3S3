@@ -498,11 +498,6 @@ class _PedometerPageState extends State<PedometerPage> {
         title: Text('Pedometer'),
         backgroundColor: Colors.blue,
         actions: [
-          /*IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _resetHardwareStepCounter,
-            tooltip: 'Réinitialiser le compteur de pas',
-          ),*/
           IconButton(
             icon: Icon(Icons.delete),
             onPressed: _resetAllData,
