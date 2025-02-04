@@ -11,10 +11,6 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:app_settings/app_settings.dart';
 import 'package:flutter/widgets.dart' show BuildContext;
-import 'package:health/health.dart';
-
-// Create a global Health instance
-final health = Health();
 
 class PedometerPage extends StatefulWidget {
   const PedometerPage({Key? key}) : super(key: key);
@@ -25,12 +21,12 @@ class PedometerPage extends StatefulWidget {
 
 class _PedometerPageState extends State<PedometerPage> {
   int _dailySteps = 0;
+  int _initialStepCount = 0;
   double _distanceKm = 0;
   int _caloriesBurned = 0;
   Duration _activityTime = Duration.zero;
   int _dailyGoal = 10000;
   bool _authorized = false;
-  List<RecordingMethod> recordingMethodsToFilter = [];
 
   List<int> _weeklySteps = List.filled(7, 0);
   List<int> _monthlySteps = List.filled(30, 0);
@@ -39,76 +35,23 @@ class _PedometerPageState extends State<PedometerPage> {
   Database? _database;
   bool _isLoading = true;
 
+  int _lastSavedStepCount = 0;
+  int _lastSavedTimestamp = 0;
+
+  int _hardwareStepCount = 0; // Added line
+
   @override
   void initState() {
     super.initState();
-    // Configure health plugin before use
-    health.configure();
     FlutterForegroundTask.addTaskDataCallback(_onReceiveData);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _requestPermissions();
-      await _resetStepsAtMidnight(); // Add this line
+      await _resetStepsAtMidnight();
       await _loadInitialSteps();
       _initForegroundTask();
       await _startForegroundTask();
-      await _syncWithHealthApp();
     });
-  }
-
-  Future<void> _authorize() async {
-    // Request activity recognition permission for step counting
-    await Permission.activityRecognition.request();
-    await Permission.location.request();
-
-    // Check if we have health permissions
-    bool? hasPermissions = await health.hasPermissions([HealthDataType.STEPS]);
-
-    // Request authorization if needed
-    if (hasPermissions != null && !hasPermissions) {
-      try {
-        _authorized = await health.requestAuthorization([HealthDataType.STEPS]);
-      } catch (error) {
-        print("Exception in authorize: $error");
-        _authorized = false;
-      }
-    } else {
-      _authorized = true;
-    }
-  }
-
-  Future<void> _syncWithHealthApp() async {
-    await _authorize();
-
-    if (_authorized) {
-      try {
-        final now = DateTime.now();
-        final midnight = DateTime(now.year, now.month, now.day);
-
-        int? healthSteps = await health.getTotalStepsInInterval(
-            midnight,
-            now,
-            includeManualEntry: !recordingMethodsToFilter.contains(RecordingMethod.manual)
-        );
-
-        if (healthSteps != null && healthSteps > 0) {
-          // Use Health app data as the source of truth
-          setState(() {
-            _dailySteps = healthSteps;
-            _updateDerivedMetrics();
-          });
-          await _saveStepData();
-
-          // Update the background service with the new value
-          FlutterForegroundTask.updateService(
-            notificationTitle: 'Pedometer running',
-            notificationText: '$_dailySteps steps',
-          );
-        }
-      } catch (error) {
-        print("Exception in syncWithHealthApp: $error");
-      }
-    }
   }
 
   void _updateDerivedMetrics() {
@@ -119,18 +62,12 @@ class _PedometerPageState extends State<PedometerPage> {
   }
 
   void _onReceiveData(Object? data) {
-    print('Data received from background service: $data');
     if (data is int && mounted) {
       setState(() {
-        // Update _dailySteps only if the new value is greater
-        if (data > _dailySteps) {
-          _dailySteps = data;
-          _updateDerivedMetrics();
-        }
+        _dailySteps = data;
+        _updateDerivedMetrics();
       });
       _saveStepData();
-      // Sync with Health app to get the most accurate value
-      _syncWithHealthApp();
     }
   }
 
@@ -146,7 +83,6 @@ class _PedometerPageState extends State<PedometerPage> {
   Future<void> _requestPermissions() async {
     Map<Permission, PermissionStatus> statuses = await [
       Permission.activityRecognition,
-      Permission.location,
     ].request();
 
     if (statuses.values.every((status) => status.isGranted)) {
@@ -163,7 +99,7 @@ class _PedometerPageState extends State<PedometerPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Permissions required'),
-          content: Text('This app requires permissions to access activity and location to function properly.'),
+          content: Text('This app requires permissions to access activity to function properly.'),
           actions: <Widget>[
             TextButton(
               child: Text('Quit'),
@@ -225,7 +161,6 @@ class _PedometerPageState extends State<PedometerPage> {
   Future<bool> _checkPermissions() async {
     Map<Permission, PermissionStatus> statuses = await [
       Permission.activityRecognition,
-      Permission.location,
     ].request();
     return statuses.values.every((status) => status.isGranted);
   }
@@ -234,7 +169,6 @@ class _PedometerPageState extends State<PedometerPage> {
     try {
       await _initDatabase();
       await _loadSavedData();
-      await _syncWithHealthApp();
       _initPedometer();
       if (mounted) {
         setState(() {
@@ -242,7 +176,6 @@ class _PedometerPageState extends State<PedometerPage> {
         });
       }
     } catch (e) {
-      print('Initialization error: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -293,11 +226,33 @@ class _PedometerPageState extends State<PedometerPage> {
     _stepCountStream.listen(_onStepCount);
   }
 
-  void _onStepCount(StepCount event) {
+  void _onStepCount(StepCount event) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _hardwareStepCount = event.steps; // Updated line
+    int steps = _hardwareStepCount - _initialStepCount; // Updated line
+
+    if (steps < 0) { // Updated condition
+      // Le téléphone a été redémarré, restaurons à partir de la dernière sauvegarde
+      _initialStepCount = _hardwareStepCount - _lastSavedStepCount; // Updated line
+      steps = _lastSavedStepCount; // Updated line
+    }
+
     setState(() {
-      _dailySteps = event.steps;
+      _dailySteps = steps;
       _updateDerivedMetrics();
     });
+
+    // Sauvegardons l'état actuel
+    if (now - _lastSavedTimestamp > 5 * 60 * 1000) { // Sauvegarde toutes les 5 minutes
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('hardwareStepCount', _hardwareStepCount); // Updated line
+      await prefs.setInt('lastSavedStepCount', steps);
+      await prefs.setInt('lastSavedTimestamp', now);
+      await prefs.setInt('initialStepCount', _initialStepCount);
+      _lastSavedStepCount = steps;
+      _lastSavedTimestamp = now;
+    }
+
     _saveStepData();
   }
 
@@ -379,14 +334,24 @@ class _PedometerPageState extends State<PedometerPage> {
   Future<void> _loadInitialSteps() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int savedSteps = prefs.getInt('dailySteps') ?? 0;
+    _hardwareStepCount = prefs.getInt('hardwareStepCount') ?? 0; // Updated line
+    _initialStepCount = prefs.getInt('initialStepCount') ?? _hardwareStepCount; // Updated line
+    _lastSavedStepCount = prefs.getInt('lastSavedStepCount') ?? 0;
+    _lastSavedTimestamp = prefs.getInt('lastSavedTimestamp') ?? 0;
     DateTime lastResetTime = DateTime.fromMillisecondsSinceEpoch(
         prefs.getInt('lastResetTime') ?? DateTime.now().millisecondsSinceEpoch);
 
-    if (DateTime.now().day != lastResetTime.day) {
-      // If it's a new day, reset the steps
+    final now = DateTime.now();
+    if (now.day != lastResetTime.day || now.month != lastResetTime.month || now.year != lastResetTime.year) {
       savedSteps = 0;
+      _initialStepCount = _hardwareStepCount; // Updated line
+      _lastSavedStepCount = 0;
+      _lastSavedTimestamp = now.millisecondsSinceEpoch;
       await prefs.setInt('dailySteps', 0);
-      await prefs.setInt('lastResetTime', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt('initialStepCount', _initialStepCount);
+      await prefs.setInt('lastSavedStepCount', 0);
+      await prefs.setInt('lastSavedTimestamp', _lastSavedTimestamp);
+      await prefs.setInt('lastResetTime', now.millisecondsSinceEpoch);
     }
 
     setState(() {
@@ -403,18 +368,119 @@ class _PedometerPageState extends State<PedometerPage> {
     );
 
     if (now.day != lastResetTime.day) {
-      // Reset steps at midnight
       setState(() {
         _dailySteps = 0;
+        _initialStepCount = 0;
         _updateDerivedMetrics();
       });
       await prefs.setInt('dailySteps', 0);
+      await prefs.setInt('initialStepCount', 0);
       await prefs.setInt('lastResetTime', now.millisecondsSinceEpoch);
-
-      // Sync with Health app after reset
-      await _syncWithHealthApp();
     }
   }
+
+  Future<void> _resetAllData() async {
+    bool confirmReset = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Réinitialiser toutes les données'),
+          content: Text('Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Annuler'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: Text('Réinitialiser'),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmReset == true) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      if (_database != null) {
+        await _database!.delete('steps');
+      }
+
+      setState(() {
+        _dailySteps = 0;
+        _initialStepCount = 0;
+        _distanceKm = 0;
+        _caloriesBurned = 0;
+        _activityTime = Duration.zero;
+        _weeklySteps = List.filled(7, 0);
+        _monthlySteps = List.filled(30, 0);
+        _lastSavedStepCount = 0;
+        _lastSavedTimestamp = 0;
+        _hardwareStepCount = 0; // Added line
+      });
+
+      await prefs.setInt('dailySteps', 0);
+      await prefs.setInt('initialStepCount', 0);
+      await prefs.setInt('lastResetTime', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt('lastSavedStepCount', 0);
+      await prefs.setInt('lastSavedTimestamp', 0);
+      await prefs.setInt('hardwareStepCount', 0); // Added line
+
+      await FlutterForegroundTask.restartService();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Toutes les données ont été réinitialisées')),
+      );
+    }
+  }
+
+  Future<void> _resetHardwareStepCounter() async {
+    bool confirmReset = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Réinitialiser le compteur de pas'),
+          content: Text('Êtes-vous sûr de vouloir réinitialiser le compteur de pas matériel ? Cette action est irréversible.'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Annuler'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: Text('Réinitialiser'),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmReset == true) {
+      setState(() {
+        _hardwareStepCount = _initialStepCount + _dailySteps; // Updated line
+        _initialStepCount = _hardwareStepCount; // Updated line
+        _dailySteps = 0;
+        _lastSavedStepCount = 0;
+        _lastSavedTimestamp = DateTime.now().millisecondsSinceEpoch;
+      });
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('hardwareStepCount', _hardwareStepCount); // Updated line
+      await prefs.setInt('initialStepCount', _initialStepCount);
+      await prefs.setInt('dailySteps', 0);
+      await prefs.setInt('lastSavedStepCount', 0);
+      await prefs.setInt('lastSavedTimestamp', _lastSavedTimestamp);
+
+      await FlutterForegroundTask.restartService();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Le compteur de pas a été réinitialisé')),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -431,6 +497,18 @@ class _PedometerPageState extends State<PedometerPage> {
       appBar: AppBar(
         title: Text('Pedometer'),
         backgroundColor: Colors.blue,
+        actions: [
+          /*IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _resetHardwareStepCounter,
+            tooltip: 'Réinitialiser le compteur de pas',
+          ),*/
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: _resetAllData,
+            tooltip: 'Réinitialiser toutes les données',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -743,49 +821,45 @@ void startCallback() {
 
 class PedometerTaskHandler extends TaskHandler {
   int _steps = 0;
-  int _lastReportedSteps = 0;
+  int _initialStepCount = 0;
   DateTime _lastResetTime = DateTime.now();
   StreamSubscription<StepCount>? _stepCountSubscription;
   SharedPreferences? _prefs;
 
+  int _lastSavedStepCount = 0;
+  int _lastSavedTimestamp = 0;
+  int _hardwareStepCount = 0; // Added variable
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    await [Permission.activityRecognition, Permission.location].request();
+    await [Permission.activityRecognition].request();
     _prefs = await SharedPreferences.getInstance();
 
-    // Load saved state
     _steps = _prefs?.getInt('dailySteps') ?? 0;
+    _hardwareStepCount = _prefs?.getInt('hardwareStepCount') ?? 0; // Updated line
+    _initialStepCount = _prefs?.getInt('initialStepCount') ?? _hardwareStepCount; // Updated line
+    _lastSavedStepCount = _prefs?.getInt('lastSavedStepCount') ?? 0;
+    _lastSavedTimestamp = _prefs?.getInt('lastSavedTimestamp') ?? 0;
     _lastResetTime = DateTime.fromMillisecondsSinceEpoch(
       _prefs?.getInt('lastResetTime') ?? DateTime.now().millisecondsSinceEpoch,
     );
 
-    _stepCountSubscription = Pedometer.stepCountStream.listen((StepCount event) {
-      final now = DateTime.now();
+    final now = DateTime.now();
+    if (now.day != _lastResetTime.day || now.month != _lastResetTime.month || now.year != _lastResetTime.year) {
+      _steps = 0;
+      _initialStepCount = _hardwareStepCount; // Updated line
+      _lastSavedStepCount = 0;
+      _lastSavedTimestamp = now.millisecondsSinceEpoch;
+      _lastResetTime = now;
+      await _prefs?.setInt('lastResetTime', now.millisecondsSinceEpoch);
+      await _prefs?.setInt('dailySteps', 0);
+      await _prefs?.setInt('initialStepCount', _initialStepCount); // Updated line
+      await _prefs?.setInt('lastSavedStepCount', 0);
+      await _prefs?.setInt('lastSavedTimestamp', _lastSavedTimestamp);
+    }
 
-      // Reset at midnight
-      if (now.day != _lastResetTime.day) {
-        _steps = 0;
-        _lastReportedSteps = 0;
-        _lastResetTime = now;
-        _prefs?.setInt('lastResetTime', now.millisecondsSinceEpoch);
-        _prefs?.setInt('dailySteps', 0);
-      }
 
-      // Calculate step difference and update if reasonable
-      int stepsDifference = event.steps - _lastReportedSteps;
-      if (stepsDifference > 0 && stepsDifference < 100) { // Filter unreasonable jumps
-        _steps += stepsDifference;
-        _lastReportedSteps = event.steps;
-        _prefs?.setInt('dailySteps', _steps);
-
-        // Update notification and main UI
-        FlutterForegroundTask.updateService(
-          notificationTitle: 'Pedometer running',
-          notificationText: '$_steps steps',
-        );
-        FlutterForegroundTask.sendDataToMain(_steps);
-      }
-    });
+    _stepCountSubscription = Pedometer.stepCountStream.listen(_onStepCount);
   }
 
   @override
@@ -796,17 +870,58 @@ class PedometerTaskHandler extends TaskHandler {
 
   @override
   void onRepeatEvent(DateTime timestamp) {
-    // Implementation of required method
-    // Not used as we're using stream-based updates
   }
 
   @override
   void onNotificationButtonPressed(String id) {
-    print('Button pressed: $id');
   }
 
   @override
   void onNotificationPressed() {
-    print('Notification pressed');
+  }
+
+  void _onStepCount(StepCount event) async {
+    final now = DateTime.now();
+    _hardwareStepCount = event.steps; // Updated line
+
+    if (now.day != _lastResetTime.day || now.month != _lastResetTime.month || now.year != _lastResetTime.year) {
+      _steps = 0;
+      _initialStepCount = _hardwareStepCount; // Updated line
+      _lastSavedStepCount = 0;
+      _lastSavedTimestamp = now.millisecondsSinceEpoch;
+      _lastResetTime = now;
+      await _prefs?.setInt('lastResetTime', now.millisecondsSinceEpoch);
+      await _prefs?.setInt('dailySteps', 0);
+      await _prefs?.setInt('initialStepCount', _initialStepCount); // Updated line
+      await _prefs?.setInt('lastSavedStepCount', 0);
+      await _prefs?.setInt('lastSavedTimestamp', _lastSavedTimestamp);
+    }
+
+    int newSteps = _hardwareStepCount - _initialStepCount; // Updated line
+    if (newSteps < 0) {
+      // Le téléphone a été redémarré, restaurons à partir de la dernière sauvegarde
+      _initialStepCount = _hardwareStepCount - _lastSavedStepCount; // Updated line
+      newSteps = _lastSavedStepCount; // Updated line
+    }
+
+    _steps = newSteps;
+    await _prefs?.setInt('dailySteps', _steps);
+
+    // Sauvegardons l'état actuel
+    if (now.millisecondsSinceEpoch - _lastSavedTimestamp > 5 * 60 * 1000) { // Sauvegarde toutes les 5 minutes
+      await _prefs?.setInt('hardwareStepCount', _hardwareStepCount); // Updated line
+      await _prefs?.setInt('lastSavedStepCount', _steps);
+      await _prefs?.setInt('lastSavedTimestamp', now.millisecondsSinceEpoch);
+      await _prefs?.setInt('initialStepCount', _initialStepCount); // Updated line
+      _lastSavedStepCount = _steps;
+      _lastSavedTimestamp = now.millisecondsSinceEpoch;
+    }
+
+    FlutterForegroundTask.updateService(
+      notificationTitle: 'Pedometer running',
+      notificationText: '$_steps steps',
+    );
+    FlutterForegroundTask.sendDataToMain(_steps);
   }
 }
+

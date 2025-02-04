@@ -350,7 +350,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                       );
                     },
                   ),
-                  IconButton(
+                  /*IconButton(
                     icon: Icon(Icons.nfc, color: Colors.black87),
                     onPressed: () {
                       Navigator.push(
@@ -358,7 +358,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                         MaterialPageRoute(builder: (context) => PageNFC()),
                       );
                     },
-                  ),
+                  ),*/
                   IconButton(
                     icon: Icon(Icons.map, color: Colors.black87),
                     onPressed: () async {
@@ -394,7 +394,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin, Widg
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildActionButton(Icons.thumb_down, 'Not Interested', Colors.red, _handleDislike),
-                    _buildActionButton(Icons.undo, 'Return', Colors.orange, _actionHistory.isNotEmpty ? _handleUndo : null),
+                    //_buildActionButton(Icons.undo, 'Return', Colors.orange, _actionHistory.isNotEmpty ? _handleUndo : null),
                     _buildActionButton(Icons.thumb_up, 'Like', Colors.green, _handleLike),
                     _buildActionButton(Icons.star, 'Favorite', Colors.blue, _handleFavorite),
                   ],
