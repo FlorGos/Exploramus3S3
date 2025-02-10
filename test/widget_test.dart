@@ -11,6 +11,5 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:swipezone/main.dart';
 
 void main() {
-    // Build our app and trigger a frame.
-   
+  // Build our app and trigger a frame.
 }

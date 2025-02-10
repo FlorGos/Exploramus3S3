@@ -1,0 +1,13 @@
+[33m60d5202[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mGuillaume[m[33m)[m HEAD@{0}: pull https://github.com/jipspaul/esme24.git: Fast-forward
+[33mbb5c63b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31morigin/Guillaume[m[33m, [m[1;31morigin/Antho[m[33m)[m HEAD@{1}: checkout: moving from main to Guillaume
+[33m9b022ac[m[33m ([m[1;32mmain[m[33m)[m HEAD@{2}: rebase (abort): returning to refs/heads/main
+[33mc683201[m HEAD@{3}: commit: Résolution des conflits
+[33m6564932[m HEAD@{4}: pull origin main --rebase (start): checkout 6564932c55b47f1ccc4d7fcebf332d6bf2c75b9e
+[33m9b022ac[m[33m ([m[1;32mmain[m[33m)[m HEAD@{5}: Branch: renamed refs/heads/Guillaume to refs/heads/main
+[33m9b022ac[m[33m ([m[1;32mmain[m[33m)[m HEAD@{7}: commit: Premier commit code projet Android
+[33mee8dc86[m HEAD@{8}: reset: moving to HEAD
+[33mee8dc86[m HEAD@{9}: pull https://github.com/jipspaul/esme24.git: Fast-forward
+[33mbb5c63b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31morigin/Guillaume[m[33m, [m[1;31morigin/Antho[m[33m)[m HEAD@{10}: reset: moving to HEAD
+[33mbb5c63b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31morigin/Guillaume[m[33m, [m[1;31morigin/Antho[m[33m)[m HEAD@{11}: Branch: renamed refs/heads/3S3 to refs/heads/Guillaume
+[33mbb5c63b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31morigin/Guillaume[m[33m, [m[1;31morigin/Antho[m[33m)[m HEAD@{13}: checkout: moving from main to 3S3
+[33mbb5c63b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;31morigin/Guillaume[m[33m, [m[1;31morigin/Antho[m[33m)[m HEAD@{14}: clone: from https://github.com/FlorGos/Exploramus3S3

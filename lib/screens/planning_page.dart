@@ -1,26 +1,164 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:swipezone/repositories/models/location.dart';
+import 'location_detail_page.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:swipezone/screens/widgets/map_page.dart';
+import 'package:provider/provider.dart';
+import 'package:swipezone/domains/location_manager.dart';
 
 class PlanningPage extends StatefulWidget {
   final String title;
+  final List<Location> selectedLocations;
 
-  const PlanningPage({super.key, required this.title});
+  const PlanningPage({
+    Key? key,
+    required this.title,
+    required this.selectedLocations,
+  }) : super(key: key);
 
   @override
   State<PlanningPage> createState() => _PlanningPageState();
 }
 
 class _PlanningPageState extends State<PlanningPage> {
+  late List<Location> selectedLikedLocations;
+  late List<Location> selectedFavoriteLocations;
+
+  @override
+  void initState() {
+    super.initState();
+    _separateSelectedLocations();
+  }
+
+  void _separateSelectedLocations() {
+    final locationManager = Provider.of<LocationManager>(context, listen: false);
+    setState(() {
+      selectedLikedLocations = widget.selectedLocations
+          .where((location) => locationManager.likedLocations.contains(location) &&
+          !locationManager.favoriteLocations.contains(location))
+          .map((location) => location.clone())
+          .toList();
+      selectedFavoriteLocations = widget.selectedLocations
+          .where((location) => locationManager.favoriteLocations.contains(location))
+          .map((location) => location.clone())
+          .toList();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          elevation: 0,
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Selected Liked'),
+              Tab(text: 'Selected Favorites'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildLocationList(selectedLikedLocations),
+            _buildLocationList(selectedFavoriteLocations),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () async {
+            try {
+              Position userPosition = await Geolocator.getCurrentPosition();
+              final updatedLocations = await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => MapScreen(
+                    userPosition: LatLng(userPosition.latitude, userPosition.longitude),
+                    locations: [...selectedLikedLocations, ...selectedFavoriteLocations],
+                  ),
+                ),
+              );
+              if (updatedLocations != null) {
+                setState(() {
+                  widget.selectedLocations.clear();
+                  widget.selectedLocations.addAll(updatedLocations);
+                  _separateSelectedLocations();
+                });
+              }
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Unable to get location. Please enable location services.'),
+                backgroundColor: Colors.red,
+              ));
+            }
+          },
+          tooltip: 'View on map',
+          icon: Icon(Icons.map),
+          label: Text('View on map'),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+        ),
       ),
-      body: Center(child: FilledButton(onPressed: (){
-        GoRouter.of(context).go("/selectpage");
-      }, child: Text(widget.title))),
+    );
+  }
+
+  Widget _buildLocationList(List<Location> locations) {
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(16),
+          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          child: Text(
+            'Your itinerary (${locations.length} places)',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Expanded(
+          child: locations.isEmpty
+              ? Center(child: Text('No places selected in this category'))
+              : ListView.builder(
+            itemCount: locations.length,
+            itemBuilder: (context, index) {
+              final location = locations[index];
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                elevation: 2,
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    child: Text('${index + 1}', style: TextStyle(color: Colors.white)),
+                  ),
+                  title: Text(location.nom, style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(location.description ?? 'No description'),
+                      SizedBox(height: 4),
+                      Text(
+                        'Coordinates: ${location.localization.lat?.toStringAsFixed(4) ?? 'N/A'}, ${location.localization.lng?.toStringAsFixed(4) ?? 'N/A'}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LocationDetailPage(location: location),
+                      ),
+                    );
+                  },
+                  trailing: Icon(Icons.chevron_right),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
+

@@ -1,1 +1,1 @@
-enum Categories { Unknown, Museum,Tower,Church,HistoricalSite,Park }
+enum Categories { Unknown, Museum, Tower, Church, HistoricalSite, Park }
